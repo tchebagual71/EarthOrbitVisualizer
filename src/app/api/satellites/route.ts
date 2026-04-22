@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
+    cache.delete(category); // don't cache errors
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
