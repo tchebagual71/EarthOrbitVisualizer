@@ -4,33 +4,46 @@ import type { SatelliteRecord, OrbitCategory } from "@/types/satellite";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+const SWR_OPTS = {
+  revalidateOnFocus: false,
+  dedupingInterval: 3600_000,
+};
+
 export interface TLEDataResult {
   satellites: SatelliteRecord[];
   isLoading: boolean;
   error: Error | null;
 }
 
+// Single-category hook — safe to call unconditionally
 export function useTLEData(category: OrbitCategory): TLEDataResult {
   const { data, error, isLoading } = useSWR<SatelliteRecord[]>(
     `/api/satellites?category=${category}`,
     fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 3600_000, // 1 hour
-    }
+    SWR_OPTS
   );
-
-  return {
-    satellites: data ?? [],
-    isLoading,
-    error: error ?? null,
-  };
+  return { satellites: data ?? [], isLoading, error: error ?? null };
 }
 
-export function useAllTLEData(categories: OrbitCategory[]): TLEDataResult {
-  const results = categories.map((c) => useTLEData(c)); // eslint-disable-line react-hooks/rules-of-hooks
-  const satellites = results.flatMap((r) => r.satellites);
-  const isLoading = results.some((r) => r.isLoading);
-  const error = results.find((r) => r.error)?.error ?? null;
+// Always calls all 7 hooks (fixed count) — filters by enabled set after
+export function useAllTLEData(enabled: Set<OrbitCategory>): TLEDataResult {
+  const stations = useTLEData("stations");
+  const starlink = useTLEData("starlink");
+  const gps      = useTLEData("gps");
+  const weather  = useTLEData("weather");
+  const geo      = useTLEData("geo");
+  const amateur  = useTLEData("amateur");
+  const debris   = useTLEData("debris");
+
+  const all: Record<OrbitCategory, TLEDataResult> = {
+    stations, starlink, gps, weather, geo, amateur, debris,
+  };
+
+  const active = (Object.keys(all) as OrbitCategory[]).filter((c) => enabled.has(c));
+  const satellites = active.flatMap((c) => all[c].satellites);
+  const isLoading  = active.some((c) => all[c].isLoading);
+  const errorEntry = active.find((c) => all[c].error);
+  const error      = errorEntry ? all[errorEntry].error : null;
+
   return { satellites, isLoading, error };
 }

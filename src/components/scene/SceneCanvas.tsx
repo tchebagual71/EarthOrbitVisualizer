@@ -8,7 +8,6 @@ import { SatelliteCloud } from "./SatelliteCloud";
 import { OrbitalPath } from "./OrbitalPath";
 import { useStore } from "@/hooks/useStore";
 import { useAllTLEData } from "@/hooks/useTLEData";
-import { CELESTRAK_GROUPS } from "@/lib/categories";
 import type { SatelliteRecord } from "@/types/satellite";
 
 export function SceneCanvas() {
@@ -35,11 +34,7 @@ export function SceneCanvas() {
     };
   }, [playing, timeSpeed, simTime, setSimTime]);
 
-  const enabledCats = CELESTRAK_GROUPS
-    .filter((g) => enabledCategories.has(g.id))
-    .map((g) => g.id);
-
-  const { satellites } = useAllTLEData(enabledCats);
+  const { satellites } = useAllTLEData(enabledCategories);
 
   const handleSelect = useCallback(
     (sat: SatelliteRecord) => setSelectedSat(sat),
