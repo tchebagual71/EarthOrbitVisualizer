@@ -14,10 +14,11 @@ function CategoryRow({ group }: { group: (typeof CELESTRAK_GROUPS)[number] }) {
     <button
       onClick={() => toggleCategory(group.id as OrbitCategory)}
       className={cn(
-        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors w-full text-left",
+        // 44px min height for Apple HIG touch target
+        "flex items-center gap-2 rounded-md px-2 min-h-[44px] text-sm transition-colors w-full text-left",
         enabled
           ? "bg-slate-800/70 text-slate-100"
-          : "text-slate-500 hover:bg-slate-800/40 hover:text-slate-300"
+          : "text-slate-500 hover:bg-slate-800/40 hover:text-slate-300 active:bg-slate-800/60"
       )}
     >
       <span
@@ -36,8 +37,8 @@ function CategoryRow({ group }: { group: (typeof CELESTRAK_GROUPS)[number] }) {
 
 export function CategoryFilter() {
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">
+    <div className="flex flex-col gap-0.5">
+      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1 px-2">
         Categories
       </p>
       {CELESTRAK_GROUPS.map((group) => (

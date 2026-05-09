@@ -12,15 +12,17 @@ export function InfoPanel() {
   const orbitClass = classifyAltitude(selectedSat.altitude);
 
   return (
-    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-64 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 text-sm shadow-2xl">
+    <div className="info-panel absolute z-20 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 text-sm shadow-2xl">
       <div className="flex items-start justify-between mb-3">
         <div>
           <h2 className="font-semibold text-white leading-tight">{selectedSat.name}</h2>
           <p className="text-slate-400 text-xs mt-0.5">NORAD #{selectedSat.noradId}</p>
         </div>
+        {/* 44×44 touch target for dismiss */}
         <button
           onClick={() => setSelectedSat(null)}
-          className="text-slate-500 hover:text-slate-200 text-lg leading-none -mt-0.5"
+          className="flex h-11 w-11 -mt-1 -mr-1 items-center justify-center rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-700/40 transition-colors text-lg"
+          aria-label="Close"
         >
           ×
         </button>
@@ -30,7 +32,7 @@ export function InfoPanel() {
         <Row label="Category">
           <span className="flex items-center gap-1.5">
             <span
-              className="h-2 w-2 rounded-full"
+              className="h-2 w-2 rounded-full flex-shrink-0"
               style={{ background: group?.color }}
             />
             {group?.label ?? selectedSat.category}
@@ -49,7 +51,7 @@ export function InfoPanel() {
 
       <button
         onClick={() => setShowOrbitPath(!showOrbitPath)}
-        className="mt-4 w-full rounded-md bg-slate-700/60 hover:bg-slate-600/60 py-1.5 text-xs transition-colors text-slate-200"
+        className="mt-4 w-full rounded-md bg-slate-700/60 hover:bg-slate-600/60 active:bg-slate-500/60 py-2.5 text-xs transition-colors text-slate-200 min-h-[44px]"
       >
         {showOrbitPath ? "Hide" : "Show"} Orbital Path
       </button>
