@@ -3,12 +3,13 @@ import { useRef, useState, useCallback } from "react";
 import { CategoryFilter } from "./CategoryFilter";
 import { useStore } from "@/hooks/useStore";
 import { useAllTLEData } from "@/hooks/useTLEData";
+import { cn } from "@/lib/utils";
 
 export function ControlPanel() {
   const { enabledCategories } = useStore();
   const { satellites, isLoading } = useAllTLEData(enabledCategories);
+  const [collapsed, setCollapsed] = useState(false);
 
-  // Draggable state
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragOrigin = useRef<{
@@ -43,17 +44,35 @@ export function ControlPanel() {
     dragOrigin.current = null;
   }, []);
 
+  // Collapsed state: floating circle button anchored to safe-area left edge
+  if (collapsed) {
+    return (
+      <button
+        onClick={() => setCollapsed(false)}
+        className="absolute z-20 flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/90 backdrop-blur-md border border-slate-700/50 shadow-xl text-white text-lg transition-colors hover:bg-slate-800/90 active:scale-95"
+        style={{
+          left: "calc(env(safe-area-inset-left, 0px) + 1rem)",
+          top: "50%",
+          transform: "translateY(-50%)",
+        }}
+        aria-label="Open satellite controls"
+      >
+        ☰
+      </button>
+    );
+  }
+
   const panelStyle: React.CSSProperties = pos
     ? { position: "fixed", left: pos.x, top: pos.y }
-    : {};
+    : { marginLeft: "env(safe-area-inset-left, 0px)" };
 
   const panelClass = pos
-    ? "w-52 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 shadow-2xl"
-    : "absolute left-4 top-1/2 -translate-y-1/2 w-52 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 shadow-2xl";
+    ? "z-20 w-52 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 shadow-2xl"
+    : "absolute left-4 top-1/2 -translate-y-1/2 z-20 w-52 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 shadow-2xl";
 
   return (
     <div ref={panelRef} style={panelStyle} className={panelClass}>
-      {/* Drag handle */}
+      {/* Drag handle + collapse button */}
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -61,7 +80,17 @@ export function ControlPanel() {
         className="flex items-center justify-between mb-1 cursor-grab active:cursor-grabbing select-none touch-none"
       >
         <h1 className="text-base font-bold text-white">Earth Orbit</h1>
-        <span className="text-slate-500 text-lg leading-none tracking-widest">⠿</span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setCollapsed(true)}
+            className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:text-slate-200 hover:bg-slate-700/50 transition-colors text-sm"
+            aria-label="Collapse panel"
+          >
+            ‹
+          </button>
+          <span className="text-slate-500 text-lg leading-none tracking-widest">⠷</span>
+        </div>
       </div>
 
       <div className="flex items-center justify-between mb-4">
@@ -75,7 +104,10 @@ export function ControlPanel() {
 
       <CategoryFilter />
 
-      <div className="mt-4 pt-3 border-t border-slate-700/50 text-xs text-slate-500 space-y-1">
+      <div className={cn(
+        "mt-4 pt-3 border-t border-slate-700/50 text-xs text-slate-500 space-y-1",
+        "hidden sm:block"
+      )}>
         <p>Tap a satellite to inspect</p>
         <p>Pinch to zoom · Drag to rotate</p>
       </div>
