@@ -53,3 +53,28 @@ export function classifyAltitude(altitudeKm: number): string {
   if (Math.abs(altitudeKm - ORBIT_BOUNDARIES.GEO) < 500) return "GEO";
   return "HEO";
 }
+
+export function parseTLEEpoch(line1: string): Date {
+  const yr2 = parseInt(line1.substring(18, 20), 10);
+  const year = yr2 < 57 ? 2000 + yr2 : 1900 + yr2;
+  const dayOfYear = parseFloat(line1.substring(20, 32));
+  const d = new Date(Date.UTC(year, 0, 1));
+  d.setTime(d.getTime() + (dayOfYear - 1) * 86400000);
+  return d;
+}
+
+export function getTLEAgeHours(line1: string, now: Date): number {
+  const epoch = parseTLEEpoch(line1);
+  return (now.getTime() - epoch.getTime()) / 3600000;
+}
+
+// Orbital period in minutes from mean motion (rad/min)
+export function orbitalPeriodMin(noRadsPerMin: number): number {
+  return (2 * Math.PI) / noRadsPerMin;
+}
+
+// Approximate circular orbital velocity km/s
+export function orbitalVelocityKms(altKm: number): number {
+  const GM = 398600.4418;
+  return Math.sqrt(GM / (6371 + altKm));
+}

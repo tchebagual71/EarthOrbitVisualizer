@@ -1,40 +1,66 @@
 "use client";
+import { useMemo } from "react";
+import * as satellite from "satellite.js";
 import { useStore } from "@/hooks/useStore";
-import { classifyAltitude } from "@/lib/tle";
+import { classifyAltitude, getTLEAgeHours, orbitalPeriodMin, orbitalVelocityKms } from "@/lib/tle";
 import { CATEGORY_MAP } from "@/lib/categories";
 
+function formatPeriod(min: number): string {
+  if (min >= 60) return `${(min / 60).toFixed(1)} h`;
+  return `${Math.round(min)} min`;
+}
+
+function formatAge(hours: number): { text: string; warn: boolean } {
+  if (hours < 1) return { text: "< 1 h old", warn: false };
+  if (hours < 24) return { text: `${Math.round(hours)} h old`, warn: false };
+  const days = Math.round(hours / 24);
+  return { text: `${days} d old`, warn: days > 7 };
+}
+
 export function InfoPanel() {
-  const { selectedSat, setSelectedSat, showOrbitPath, setShowOrbitPath } = useStore();
+  const { selectedSat, setSelectedSat, showOrbitPath, setShowOrbitPath, showGroundTrack, setShowGroundTrack, simTime } = useStore();
+
+  const derived = useMemo(() => {
+    if (!selectedSat) return null;
+    try {
+      const satrec = satellite.twoline2satrec(selectedSat.line1, selectedSat.line2);
+      const periodMin = orbitalPeriodMin(satrec.no);
+      const velocity = orbitalVelocityKms(selectedSat.altitude);
+      const ageHours = getTLEAgeHours(selectedSat.line1, simTime);
+      return { periodMin, velocity, ageHours };
+    } catch {
+      return null;
+    }
+  }, [selectedSat, simTime]);
 
   if (!selectedSat) return null;
 
   const group = CATEGORY_MAP[selectedSat.category];
   const orbitClass = classifyAltitude(selectedSat.altitude);
+  const age = derived ? formatAge(derived.ageHours) : null;
 
   return (
     <div className="info-panel absolute z-20 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 text-sm shadow-2xl">
+      {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <div>
+        <div className="flex-1 pr-2">
           <h2 className="font-semibold text-white leading-tight">{selectedSat.name}</h2>
           <p className="text-slate-400 text-xs mt-0.5">NORAD #{selectedSat.noradId}</p>
         </div>
-        {/* 44×44 touch target for dismiss */}
         <button
           onClick={() => setSelectedSat(null)}
-          className="flex h-11 w-11 -mt-1 -mr-1 items-center justify-center rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-700/40 transition-colors text-lg"
+          className="flex h-11 w-11 -mt-1 -mr-1 flex-shrink-0 items-center justify-center rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-700/40 transition-colors text-lg"
           aria-label="Close"
         >
           ×
         </button>
       </div>
 
+      {/* Stats */}
       <div className="space-y-2">
         <Row label="Category">
           <span className="flex items-center gap-1.5">
-            <span
-              className="h-2 w-2 rounded-full flex-shrink-0"
-              style={{ background: group?.color }}
-            />
+            <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: group?.color }} />
             {group?.label ?? selectedSat.category}
           </span>
         </Row>
@@ -47,14 +73,42 @@ export function InfoPanel() {
         <Row label="Inclination">
           <span className="font-mono">{selectedSat.inclination.toFixed(2)}°</span>
         </Row>
+        {derived && (
+          <>
+            <Row label="Period">
+              <span className="font-mono">{formatPeriod(derived.periodMin)}</span>
+            </Row>
+            <Row label="Velocity">
+              <span className="font-mono">{derived.velocity.toFixed(2)} km/s</span>
+            </Row>
+          </>
+        )}
       </div>
 
-      <button
-        onClick={() => setShowOrbitPath(!showOrbitPath)}
-        className="mt-4 w-full rounded-md bg-slate-700/60 hover:bg-slate-600/60 active:bg-slate-500/60 py-2.5 text-xs transition-colors text-slate-200 min-h-[44px]"
-      >
-        {showOrbitPath ? "Hide" : "Show"} Orbital Path
-      </button>
+      {/* TLE age badge */}
+      {age && (
+        <div className={`mt-3 flex items-center gap-1.5 text-xs rounded-md px-2 py-1.5 ${age.warn ? "bg-amber-900/40 text-amber-300" : "bg-slate-800/60 text-slate-400"}`}>
+          <span>{age.warn ? "⚠" : "📡"}</span>
+          <span>TLE data {age.text}</span>
+          {age.warn && <span className="text-amber-400 font-semibold">· accuracy reduced</span>}
+        </div>
+      )}
+
+      {/* Toggles */}
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={() => setShowOrbitPath(!showOrbitPath)}
+          className={`flex-1 rounded-md py-2.5 text-xs transition-colors min-h-[44px] ${showOrbitPath ? "bg-blue-600/70 hover:bg-blue-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-200"}`}
+        >
+          {showOrbitPath ? "✓ " : ""}Orbit
+        </button>
+        <button
+          onClick={() => setShowGroundTrack(!showGroundTrack)}
+          className={`flex-1 rounded-md py-2.5 text-xs transition-colors min-h-[44px] ${showGroundTrack ? "bg-yellow-600/70 hover:bg-yellow-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-200"}`}
+        >
+          {showGroundTrack ? "✓ " : ""}Ground Track
+        </button>
+      </div>
     </div>
   );
 }
