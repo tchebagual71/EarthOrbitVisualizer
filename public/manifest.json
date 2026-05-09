@@ -1,24 +1,47 @@
 {
   "name": "Earth Orbit Visualizer",
   "short_name": "Orbit Viz",
-  "description": "Real-time 3D satellite tracker in Earth orbit",
+  "description": "Real-time 3D visualization of satellites and objects in Earth orbit",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000008",
-  "theme_color": "#000008",
-  "orientation": "landscape",
+  "background_color": "#000814",
+  "theme_color": "#000814",
+  "orientation": "any",
+  "categories": ["education", "science", "utilities"],
   "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
