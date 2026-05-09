@@ -9,6 +9,7 @@ import {
   LAUNCH_SITES,
   type LaunchSiteType,
 } from "@/lib/launchsites";
+import { SHELL_DEFS } from "@/components/scene/OrbitalShells";
 import { cn } from "@/lib/utils";
 
 const SITE_TYPES: LaunchSiteType[] = ["gov", "commercial", "test", "planned", "historical"];
@@ -25,10 +26,12 @@ export function ControlPanel() {
     showLaunchSites, setShowLaunchSites,
     enabledSiteTypes, toggleSiteType,
     setShowSearch,
+    learningShell, setLearningShell,
   } = useStore();
   const { satellites, isLoading } = useAllTLEData(enabledCategories);
   const [collapsed, setCollapsed] = useState(false);
   const [sitesOpen, setSitesOpen] = useState(true);
+  const [shellsOpen, setShellsOpen] = useState(true);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -200,11 +203,63 @@ export function ControlPanel() {
         )}
       </div>
 
+      {/* Orbital shells section */}
+      <div className="border-t border-slate-700/50 px-3 py-2">
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setShellsOpen((o) => !o)}
+          className="flex items-center justify-between w-full mb-1.5 group"
+        >
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors">
+            Orbital Shells
+          </span>
+          <span className="text-slate-600 text-xs">{shellsOpen ? "▾" : "▸"}</span>
+        </button>
+
+        {shellsOpen && (
+          <div className="space-y-0.5">
+            {SHELL_DEFS.map((shell, idx) => {
+              const isActive = learningShell === idx;
+              return (
+                <div
+                  key={shell.altKm}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-2 min-h-[34px]",
+                    isActive ? "bg-slate-800/70" : "hover:bg-slate-800/30"
+                  )}
+                >
+                  <span
+                    className="h-2 w-2 flex-shrink-0 rounded-full"
+                    style={{ background: shell.color }}
+                  />
+                  <span className="flex-1 text-xs text-slate-300 leading-tight">{shell.shortLabel}</span>
+                  <button
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={() => setLearningShell(isActive ? null : idx)}
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded text-[11px] font-bold transition-colors flex-shrink-0",
+                      isActive
+                        ? "text-white"
+                        : "text-slate-500 hover:text-slate-200 hover:bg-slate-700/50"
+                    )}
+                    style={isActive ? { color: shell.color } : undefined}
+                    title={`Learn about ${shell.shortLabel}`}
+                    aria-label={`Info: ${shell.shortLabel}`}
+                  >
+                    ⓘ
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Tips */}
       <div className="border-t border-slate-700/50 px-4 py-3 hidden sm:block">
         <div className="text-[10px] text-slate-600 space-y-0.5 leading-relaxed">
           <p>Click satellite or launch site to inspect</p>
-          <p>Click orbital shell for orbit facts</p>
+          <p>Click <span className="text-slate-500">ⓘ</span> next to a shell for orbit facts</p>
           <p>Press <kbd className="bg-slate-800 rounded px-1 font-mono">/</kbd> to search</p>
         </div>
       </div>
