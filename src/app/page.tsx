@@ -4,9 +4,10 @@ import { ControlPanel } from "@/components/ui/ControlPanel";
 import { InfoPanel } from "@/components/ui/InfoPanel";
 import { TimeControl } from "@/components/ui/TimeControl";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
+import { SearchPanel } from "@/components/ui/SearchPanel";
+import { LearningCard } from "@/components/ui/LearningCard";
 import { Suspense } from "react";
 
-// Three.js must be client-side only
 const SceneCanvas = dynamic(
   () => import("@/components/scene/SceneCanvas").then((m) => m.SceneCanvas),
   { ssr: false, loading: () => <LoadingOverlay message="Initializing 3D scene…" /> }
@@ -23,6 +24,8 @@ export default function HomePage() {
       <ControlPanel />
       <InfoPanel />
       <TimeControl />
+      <SearchPanel />
+      <LearningCard />
     </main>
   );
 }

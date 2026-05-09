@@ -6,7 +6,11 @@ import { useAllTLEData } from "@/hooks/useTLEData";
 import { cn } from "@/lib/utils";
 
 export function ControlPanel() {
-  const { enabledCategories } = useStore();
+  const {
+    enabledCategories,
+    showLaunchSites, setShowLaunchSites,
+    setShowSearch,
+  } = useStore();
   const { satellites, isLoading } = useAllTLEData(enabledCategories);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -44,7 +48,6 @@ export function ControlPanel() {
     dragOrigin.current = null;
   }, []);
 
-  // Collapsed state: floating circle button anchored to safe-area left edge
   if (collapsed) {
     return (
       <button
@@ -72,7 +75,7 @@ export function ControlPanel() {
 
   return (
     <div ref={panelRef} style={panelStyle} className={panelClass}>
-      {/* Drag handle + collapse button */}
+      {/* Drag handle + collapse */}
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -93,22 +96,53 @@ export function ControlPanel() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      {/* Count + search */}
+      <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-slate-400">Real-time satellite tracker</p>
-        {isLoading ? (
-          <span className="text-xs text-blue-400 animate-pulse">loading…</span>
-        ) : (
-          <span className="text-xs text-slate-500 tabular-nums">{satellites.length.toLocaleString()}</span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {isLoading ? (
+            <span className="text-xs text-blue-400 animate-pulse">loading…</span>
+          ) : (
+            <span className="text-xs text-slate-500 tabular-nums">{satellites.length.toLocaleString()}</span>
+          )}
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setShowSearch(true)}
+            className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:text-slate-200 hover:bg-slate-700/50 transition-colors text-xs"
+            aria-label="Search satellites"
+            title="Search satellites"
+          >
+            🔍
+          </button>
+        </div>
       </div>
 
       <CategoryFilter />
 
+      {/* Overlay toggles */}
+      <div className="mt-3 pt-3 border-t border-slate-700/50 space-y-1">
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setShowLaunchSites(!showLaunchSites)}
+          className={cn(
+            "flex items-center gap-2 rounded-md px-2 min-h-[44px] text-xs w-full text-left transition-colors",
+            showLaunchSites
+              ? "text-amber-300 bg-amber-900/20 hover:bg-amber-900/30"
+              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/40"
+          )}
+        >
+          <span>🚀</span>
+          <span>Launch Sites</span>
+          {showLaunchSites && <span className="ml-auto text-amber-400">✓</span>}
+        </button>
+      </div>
+
       <div className={cn(
-        "mt-4 pt-3 border-t border-slate-700/50 text-xs text-slate-500 space-y-1",
+        "mt-3 pt-3 border-t border-slate-700/50 text-xs text-slate-500 space-y-1",
         "hidden sm:block"
       )}>
         <p>Tap a satellite to inspect</p>
+        <p>Click orbital shell for info</p>
         <p>Pinch to zoom · Drag to rotate</p>
       </div>
     </div>
