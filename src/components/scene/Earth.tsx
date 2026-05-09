@@ -1,14 +1,10 @@
 "use client";
-import { useRef } from "react";
-import { useFrame, useLoader } from "@react-three/fiber";
+import { useLoader } from "@react-three/fiber";
 import { TextureLoader } from "three";
 import * as THREE from "three";
 import { EARTH_RADIUS_SCENE } from "@/lib/constants";
 
 export function Earth() {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  // Textures loaded from NASA Blue Marble (served locally)
   const [dayMap, nightMap, cloudMap, normalMap] = useLoader(TextureLoader, [
     "/textures/earth-day.jpg",
     "/textures/earth-night.jpg",
@@ -16,16 +12,10 @@ export function Earth() {
     "/textures/earth-normal.jpg",
   ]);
 
-  useFrame((_, delta) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += delta * 0.005; // slow auto-rotation
-    }
-  });
-
   return (
     <group>
-      {/* Earth surface */}
-      <mesh ref={meshRef} castShadow receiveShadow>
+      {/* Earth surface — stationary in ECEF/scene space; sun light moves around it */}
+      <mesh castShadow receiveShadow>
         <sphereGeometry args={[EARTH_RADIUS_SCENE, 64, 64]} />
         <meshPhongMaterial
           map={dayMap}

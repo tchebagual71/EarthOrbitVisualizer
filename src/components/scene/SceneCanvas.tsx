@@ -7,6 +7,7 @@ import { OrbitalShells } from "./OrbitalShells";
 import { SatelliteCloud } from "./SatelliteCloud";
 import { SatelliteSelector } from "./SatelliteSelector";
 import { OrbitalPath } from "./OrbitalPath";
+import { SunLight } from "./SunLight";
 import { useStore } from "@/hooks/useStore";
 import { useAllTLEData } from "@/hooks/useTLEData";
 import type { SatelliteRecord } from "@/types/satellite";
@@ -77,7 +78,7 @@ export function SceneCanvas() {
         style={{ background: "#000008", touchAction: "none" }}
       >
         <ambientLight intensity={0.1} />
-        <directionalLight position={[50, 20, 30]} intensity={1.4} castShadow />
+        <SunLight />
 
         <Stars radius={300} depth={60} count={6000} factor={5} saturation={0} fade />
 
