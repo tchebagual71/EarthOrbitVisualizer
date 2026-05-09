@@ -10,6 +10,7 @@ import { SatelliteCloud } from "./SatelliteCloud";
 import { SatelliteSelector } from "./SatelliteSelector";
 import { OrbitalPath } from "./OrbitalPath";
 import { GroundTrack } from "./GroundTrack";
+import { SatelliteTrail } from "./SatelliteTrail";
 import { LaunchSites } from "./LaunchSites";
 import { SunLight } from "./SunLight";
 import { useStore } from "@/hooks/useStore";
@@ -70,7 +71,7 @@ export function SceneCanvas() {
   const {
     simTime, playing, timeSpeed, setSimTime,
     selectedSat, setSelectedSat,
-    showOrbitPath, showGroundTrack,
+    showOrbitPath, showGroundTrack, showSatTrail,
     enabledCategories, showLaunchSites,
     showSearch, setShowSearch,
   } = useStore();
@@ -172,6 +173,9 @@ export function SceneCanvas() {
           onClearTap={() => setTapPos(null)}
         />
 
+        {selectedSat && showSatTrail && (
+          <SatelliteTrail sat={selectedSat} simTime={simTime} />
+        )}
         {selectedSat && showOrbitPath && (
           <OrbitalPath sat={selectedSat} simTime={simTime} />
         )}

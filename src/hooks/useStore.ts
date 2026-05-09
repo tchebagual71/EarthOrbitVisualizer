@@ -22,6 +22,8 @@ interface AppState {
   setShowOrbitPath: (v: boolean) => void;
   showGroundTrack: boolean;
   setShowGroundTrack: (v: boolean) => void;
+  showSatTrail: boolean;
+  setShowSatTrail: (v: boolean) => void;
 
   // Satellite filters
   enabledCategories: Set<OrbitCategory>;
@@ -65,6 +67,8 @@ export const useStore = create<AppState>((set) => ({
   setShowOrbitPath: (showOrbitPath) => set({ showOrbitPath }),
   showGroundTrack: true,
   setShowGroundTrack: (showGroundTrack) => set({ showGroundTrack }),
+  showSatTrail: true,
+  setShowSatTrail: (showSatTrail) => set({ showSatTrail }),
 
   enabledCategories: new Set<OrbitCategory>([
     "stations", "starlink", "gps", "weather", "geo", "amateur", "debris",

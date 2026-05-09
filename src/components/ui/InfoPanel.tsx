@@ -18,7 +18,7 @@ function formatAge(hours: number): { text: string; warn: boolean } {
 }
 
 export function InfoPanel() {
-  const { selectedSat, setSelectedSat, showOrbitPath, setShowOrbitPath, showGroundTrack, setShowGroundTrack, simTime } = useStore();
+  const { selectedSat, setSelectedSat, showOrbitPath, setShowOrbitPath, showGroundTrack, setShowGroundTrack, showSatTrail, setShowSatTrail, simTime } = useStore();
 
   const derived = useMemo(() => {
     if (!selectedSat) return null;
@@ -95,18 +95,27 @@ export function InfoPanel() {
       )}
 
       {/* Toggles */}
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <button
+          onClick={() => setShowSatTrail(!showSatTrail)}
+          className={`rounded-md py-2 text-xs transition-colors min-h-[40px] ${showSatTrail ? "bg-purple-600/70 hover:bg-purple-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-400"}`}
+          title="30-minute history trail"
+        >
+          {showSatTrail ? "✓ " : ""}Trail
+        </button>
         <button
           onClick={() => setShowOrbitPath(!showOrbitPath)}
-          className={`flex-1 rounded-md py-2.5 text-xs transition-colors min-h-[44px] ${showOrbitPath ? "bg-blue-600/70 hover:bg-blue-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-200"}`}
+          className={`rounded-md py-2 text-xs transition-colors min-h-[40px] ${showOrbitPath ? "bg-blue-600/70 hover:bg-blue-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-400"}`}
+          title="Full orbital path"
         >
           {showOrbitPath ? "✓ " : ""}Orbit
         </button>
         <button
           onClick={() => setShowGroundTrack(!showGroundTrack)}
-          className={`flex-1 rounded-md py-2.5 text-xs transition-colors min-h-[44px] ${showGroundTrack ? "bg-yellow-600/70 hover:bg-yellow-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-200"}`}
+          className={`rounded-md py-2 text-xs transition-colors min-h-[40px] ${showGroundTrack ? "bg-yellow-600/70 hover:bg-yellow-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-400"}`}
+          title="Ground track on Earth surface"
         >
-          {showGroundTrack ? "✓ " : ""}Ground Track
+          {showGroundTrack ? "✓ " : ""}Track
         </button>
       </div>
     </div>
