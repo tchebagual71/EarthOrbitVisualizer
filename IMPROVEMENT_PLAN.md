@@ -104,10 +104,10 @@ Enabled categories, launch-site toggles, and trail/orbit/track switches reset on
 4. ~~Throttle `GroundTrack` recomputation~~ — per-sim-minute, matching `OrbitalPath` (C4).
 5. ~~Fix orbit classification~~ — `classifyAltitude` ordering fixed; new `classifyOrbit(satrec)` classifies from mean elements (semi-major axis + eccentricity, HEO when e > 0.25), used by InfoPanel (C5). Camera jump now propagates at sim time (F5). *Correction to the F5 write-up: the predicted post-jump "snap back" doesn't actually occur — the jump path is collinear with Earth center, so looking at the satellite and at the origin are the same direction; the OrbitControls target was therefore left at the origin.*
 
-### Phase B — Test & CI safety net
-6. Add Vitest + first test suite over `src/lib/` (Q1) — write the C5 boundary tests as regression proof.
-7. GitHub Actions workflow: type-check, lint (migrated off `next lint`, Q8), test, build (Q2).
-8. Rewrite CLAUDE.md to match reality; flesh out README (Q3, Q10).
+### Phase B — Test & CI safety net ✅ DONE
+6. ~~Add Vitest + first test suite over `src/lib/`~~ — 30 tests across `tle.test.ts`, `coordinates.test.ts`, `solar.test.ts`, including the C5 boundary regressions (Q1). *The suite immediately caught a new bug: `twoline2satrec` doesn't throw on malformed lines, so `tleToSatelliteRecord` emitted NaN records instead of null — now rejected explicitly.* `tleToSatelliteRecord` gained an injectable `at` date for deterministic tests.
+7. ~~GitHub Actions workflow~~ — `.github/workflows/ci.yml`: type-check → lint → test → build on PRs and pushes to `main`; `lint` script migrated from deprecated `next lint` to the ESLint CLI with flat-config ignores (Q2, Q8).
+8. ~~Rewrite CLAUDE.md to match reality; flesh out README~~ (Q3, Q10).
 
 ### Phase C — Visual & UX correctness
 9. Day/night terminator shader for Earth; rotating cloud layer (F6).

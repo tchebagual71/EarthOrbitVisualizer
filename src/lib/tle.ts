@@ -21,12 +21,12 @@ export function parseTLEText(text: string): TLERecord[] {
 
 export function tleToSatelliteRecord(
   tle: TLERecord,
-  category: OrbitCategory
+  category: OrbitCategory,
+  at: Date = new Date()
 ): SatelliteRecord | null {
   try {
     const satrec = satellite.twoline2satrec(tle.line1, tle.line2);
-    const now = new Date();
-    const result = satellite.propagate(satrec, now);
+    const result = satellite.propagate(satrec, at);
     if (!result.position || typeof result.position === "boolean") return null;
 
     const posEci = result.position as satellite.EciVec3<number>;
@@ -34,6 +34,12 @@ export function tleToSatelliteRecord(
     const altitude = r - EARTH_RADIUS_KM;
 
     const inclination = (satrec.inclo * 180) / Math.PI;
+
+    // twoline2satrec doesn't throw on malformed lines — it yields a satrec
+    // that propagates to NaN. Reject those instead of emitting NaN records.
+    if (!Number.isFinite(altitude) || !Number.isFinite(inclination) || !Number.isFinite(Number(satrec.satnum))) {
+      return null;
+    }
 
     return {
       id: String(satrec.satnum),
