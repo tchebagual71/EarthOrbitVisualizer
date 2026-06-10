@@ -21,13 +21,14 @@ const SITE_COUNTS = SITE_TYPES.reduce<Record<string, number>>((acc, t) => {
 }, {});
 
 export function ControlPanel() {
-  const {
-    enabledCategories,
-    showLaunchSites, setShowLaunchSites,
-    enabledSiteTypes, toggleSiteType,
-    setShowSearch,
-    learningShell, setLearningShell,
-  } = useStore();
+  const enabledCategories = useStore((s) => s.enabledCategories);
+  const showLaunchSites = useStore((s) => s.showLaunchSites);
+  const setShowLaunchSites = useStore((s) => s.setShowLaunchSites);
+  const enabledSiteTypes = useStore((s) => s.enabledSiteTypes);
+  const toggleSiteType = useStore((s) => s.toggleSiteType);
+  const setShowSearch = useStore((s) => s.setShowSearch);
+  const learningShell = useStore((s) => s.learningShell);
+  const setLearningShell = useStore((s) => s.setLearningShell);
   const { satellites, isLoading } = useAllTLEData(enabledCategories);
   const [collapsed, setCollapsed] = useState(false);
   const [sitesOpen, setSitesOpen] = useState(true);

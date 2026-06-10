@@ -16,11 +16,41 @@ import { SunLight } from "./SunLight";
 import { useStore } from "@/hooks/useStore";
 import { useAllTLEData } from "@/hooks/useTLEData";
 import { propagateAt } from "@/lib/coordinates";
+import { advanceSimMs, getSimMs, getSimTime } from "@/lib/simClock";
 import type { SatelliteRecord } from "@/types/satellite";
+
+// Advances the sim clock once per rendered frame, outside React state.
+// Publishes a snapshot to the store only when the displayed second changes
+// (throttled to ≥200 ms real time at high speeds) so UI clocks stay current
+// without per-frame re-renders across the app.
+function SimClockDriver() {
+  const lastPubSec = useRef(Math.floor(getSimMs() / 1000));
+  const lastPubReal = useRef(0);
+
+  useFrame((_, delta) => {
+    const { playing, timeSpeed, setSimTime } = useStore.getState();
+    if (playing && timeSpeed > 0) {
+      // Cap delta so a backgrounded tab doesn't fast-forward on refocus
+      advanceSimMs(Math.min(delta, 0.1) * 1000 * timeSpeed);
+    }
+    const sec = Math.floor(getSimMs() / 1000);
+    const real = performance.now();
+    if (sec !== lastPubSec.current && real - lastPubReal.current >= 200) {
+      lastPubSec.current = sec;
+      lastPubReal.current = real;
+      setSimTime(getSimTime());
+    }
+  });
+
+  return null;
+}
 
 // Smooth camera animator — handles both satellite and fixed-position jumps
 function CameraJumper() {
-  const { jumpTarget, setJumpTarget, jumpPosition, setJumpPosition } = useStore();
+  const jumpTarget = useStore((s) => s.jumpTarget);
+  const setJumpTarget = useStore((s) => s.setJumpTarget);
+  const jumpPosition = useStore((s) => s.jumpPosition);
+  const setJumpPosition = useStore((s) => s.setJumpPosition);
   const { camera } = useThree();
   const targetVec   = useRef(new THREE.Vector3());
   const startPos    = useRef(new THREE.Vector3());
@@ -37,12 +67,13 @@ function CameraJumper() {
     jumping.current = true;
   }, [camera]);
 
-  // Jump to satellite's current position
+  // Jump to satellite's position at the current *sim* time, so the camera
+  // lands on the satellite even when the user has scrubbed the clock.
   useEffect(() => {
     if (!jumpTarget) return;
     try {
       const satrec = satellite.twoline2satrec(jumpTarget.line1, jumpTarget.line2);
-      const pos = propagateAt(satrec, new Date());
+      const pos = propagateAt(satrec, getSimTime());
       if (pos) startJump(pos, Math.max(camera.position.length() * 0.5, 20));
     } catch { /* ignore */ }
     setJumpTarget(null);
@@ -68,38 +99,21 @@ function CameraJumper() {
 }
 
 export function SceneCanvas() {
-  const {
-    simTime, playing, timeSpeed, setSimTime,
-    selectedSat, setSelectedSat,
-    showOrbitPath, showGroundTrack, showSatTrail,
-    enabledCategories, showLaunchSites,
-    showSearch, setShowSearch,
-  } = useStore();
-  const rafRef  = useRef<number | null>(null);
-  const lastTs  = useRef<number | null>(null);
+  const selectedSat = useStore((s) => s.selectedSat);
+  const setSelectedSat = useStore((s) => s.setSelectedSat);
+  const showOrbitPath = useStore((s) => s.showOrbitPath);
+  const showGroundTrack = useStore((s) => s.showGroundTrack);
+  const showSatTrail = useStore((s) => s.showSatTrail);
+  const enabledCategories = useStore((s) => s.enabledCategories);
+  const showLaunchSites = useStore((s) => s.showLaunchSites);
+  const showSearch = useStore((s) => s.showSearch);
+  const setShowSearch = useStore((s) => s.setShowSearch);
 
   const positionsRef = useRef(new Float32Array(0));
   const posValidRef  = useRef(new Uint8Array(0));
 
   const [tapPos, setTapPos] = useState<{ x: number; y: number } | null>(null);
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
-
-  // Advance simulation clock
-  useEffect(() => {
-    if (!playing || timeSpeed === 0) return;
-    const tick = (ts: number) => {
-      if (lastTs.current !== null) {
-        setSimTime(new Date(simTime.getTime() + (ts - lastTs.current) * timeSpeed));
-      }
-      lastTs.current = ts;
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      lastTs.current = null;
-    };
-  }, [playing, timeSpeed, simTime, setSimTime]);
 
   // '/' key opens search from anywhere
   useEffect(() => {
@@ -139,6 +153,7 @@ export function SceneCanvas() {
         gl={{ antialias: true, alpha: false }}
         style={{ background: "#000008", touchAction: "none" }}
       >
+        <SimClockDriver />
         <ambientLight intensity={0.1} />
         <SunLight />
         <Stars radius={300} depth={60} count={6000} factor={5} saturation={0} fade />
@@ -158,7 +173,6 @@ export function SceneCanvas() {
         <Suspense fallback={null}>
           <SatelliteCloud
             satellites={satellites}
-            simTime={simTime}
             positionsRef={positionsRef}
             posValidRef={posValidRef}
           />
@@ -173,15 +187,9 @@ export function SceneCanvas() {
           onClearTap={() => setTapPos(null)}
         />
 
-        {selectedSat && showSatTrail && (
-          <SatelliteTrail sat={selectedSat} simTime={simTime} />
-        )}
-        {selectedSat && showOrbitPath && (
-          <OrbitalPath sat={selectedSat} simTime={simTime} />
-        )}
-        {selectedSat && showGroundTrack && (
-          <GroundTrack sat={selectedSat} simTime={simTime} />
-        )}
+        {selectedSat && showSatTrail && <SatelliteTrail sat={selectedSat} />}
+        {selectedSat && showOrbitPath && <OrbitalPath sat={selectedSat} />}
+        {selectedSat && showGroundTrack && <GroundTrack sat={selectedSat} />}
 
         <CameraJumper />
 

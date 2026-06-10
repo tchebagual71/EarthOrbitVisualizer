@@ -38,11 +38,12 @@ function siteScore(site: LaunchSite, q: string): number {
 }
 
 export function SearchPanel() {
-  const {
-    showSearch, setShowSearch,
-    setSelectedSat, setJumpTarget, setJumpPosition,
-    enabledCategories,
-  } = useStore();
+  const showSearch = useStore((s) => s.showSearch);
+  const setShowSearch = useStore((s) => s.setShowSearch);
+  const setSelectedSat = useStore((s) => s.setSelectedSat);
+  const setJumpTarget = useStore((s) => s.setJumpTarget);
+  const setJumpPosition = useStore((s) => s.setJumpPosition);
+  const enabledCategories = useStore((s) => s.enabledCategories);
   const { satellites } = useAllTLEData(enabledCategories);
   const [query, setQuery]     = useState("");
   const [cursor, setCursor]   = useState(-1);

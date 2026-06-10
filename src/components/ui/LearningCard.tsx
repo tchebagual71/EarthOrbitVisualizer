@@ -4,7 +4,8 @@ import { useStore } from "@/hooks/useStore";
 import { SHELL_DEFS } from "@/components/scene/OrbitalShells";
 
 export function LearningCard() {
-  const { learningShell, setLearningShell } = useStore();
+  const learningShell = useStore((s) => s.learningShell);
+  const setLearningShell = useStore((s) => s.setLearningShell);
 
   const close = useCallback(() => setLearningShell(null), [setLearningShell]);
 

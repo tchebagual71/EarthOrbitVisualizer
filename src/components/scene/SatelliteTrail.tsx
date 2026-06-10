@@ -3,18 +3,19 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import * as satellite from "satellite.js";
 import { propagateAt } from "@/lib/coordinates";
+import { useStore } from "@/hooks/useStore";
 import type { SatelliteRecord } from "@/types/satellite";
 import { CATEGORY_MAP } from "@/lib/categories";
 
 interface Props {
   sat: SatelliteRecord;
-  simTime: Date;
 }
 
 const TRAIL_MINUTES = 30;
 const TRAIL_STEPS = 90; // one point every 20 seconds
 
-export function SatelliteTrail({ sat, simTime }: Props) {
+export function SatelliteTrail({ sat }: Props) {
+  const simTime = useStore((s) => s.simTime);
   const color = CATEGORY_MAP[sat.category]?.color ?? "#ffffff";
 
   // Recompute every 20 sim-seconds to keep trail smooth during fast forward

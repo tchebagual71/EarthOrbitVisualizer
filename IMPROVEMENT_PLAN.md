@@ -97,12 +97,12 @@ Enabled categories, launch-site toggles, and trail/orbit/track switches reset on
 
 ## 5. Phased plan
 
-### Phase A — Correctness & frame-rate fixes (small diffs, biggest payoff)
-1. Rework the sim clock: single stable rAF/`useFrame` driver, time in a ref, ~1 Hz store publication (fixes C1, half of C2).
-2. Convert all `useStore()` calls to selector form (C2).
-3. Memoize the merged satellite array in `useAllTLEData` (C3); conditional SWR keys for disabled categories (F2).
-4. Throttle `GroundTrack` recomputation (C4).
-5. Fix `classifyAltitude` ordering + element-based classification (C5); fix camera jump to use sim time and update controls target (F5).
+### Phase A — Correctness & frame-rate fixes (small diffs, biggest payoff) ✅ DONE
+1. ~~Rework the sim clock~~ — `src/lib/simClock.ts` holds time outside React; `SimClockDriver` (useFrame) advances it and publishes to the store only when the displayed second changes, throttled to ≥200 ms real time (fixes C1, half of C2).
+2. ~~Convert all `useStore()` calls to selector form~~ (C2).
+3. ~~Memoize the merged satellite array in `useAllTLEData`; conditional SWR keys for disabled categories~~ (C3, F2).
+4. ~~Throttle `GroundTrack` recomputation~~ — per-sim-minute, matching `OrbitalPath` (C4).
+5. ~~Fix orbit classification~~ — `classifyAltitude` ordering fixed; new `classifyOrbit(satrec)` classifies from mean elements (semi-major axis + eccentricity, HEO when e > 0.25), used by InfoPanel (C5). Camera jump now propagates at sim time (F5). *Correction to the F5 write-up: the predicted post-jump "snap back" doesn't actually occur — the jump path is collinear with Earth center, so looking at the satellite and at the origin are the same direction; the OrbitControls target was therefore left at the origin.*
 
 ### Phase B — Test & CI safety net
 6. Add Vitest + first test suite over `src/lib/` (Q1) — write the C5 boundary tests as regression proof.

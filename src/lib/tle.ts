@@ -2,6 +2,9 @@ import type { TLERecord, SatelliteRecord, OrbitCategory } from "@/types/satellit
 import * as satellite from "satellite.js";
 import { EARTH_RADIUS_KM, ORBIT_BOUNDARIES } from "./constants";
 
+// Earth's gravitational parameter, km³/s²
+const GM = 398600.4418;
+
 export function parseTLEText(text: string): TLERecord[] {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
   const records: TLERecord[] = [];
@@ -47,10 +50,28 @@ export function tleToSatelliteRecord(
   }
 }
 
+const GEO_TOLERANCE_KM = 500;
+
 export function classifyAltitude(altitudeKm: number): string {
+  // GEO tolerance band must be checked before the MEO upper bound,
+  // otherwise altitudes just below 35,786 km would classify as MEO.
+  if (Math.abs(altitudeKm - ORBIT_BOUNDARIES.GEO) < GEO_TOLERANCE_KM) return "GEO";
   if (altitudeKm < ORBIT_BOUNDARIES.LEO_MAX) return "LEO";
   if (altitudeKm < ORBIT_BOUNDARIES.MEO_MAX) return "MEO";
-  if (Math.abs(altitudeKm - ORBIT_BOUNDARIES.GEO) < 500) return "GEO";
+  return "HEO";
+}
+
+// Orbit class from mean elements. More robust than an instantaneous-altitude
+// snapshot, which mislabels eccentric orbits (a Molniya sat near perigee
+// would read as LEO).
+export function classifyOrbit(satrec: satellite.SatRec): string {
+  const nRadSec = satrec.no / 60; // satrec.no is rad/min
+  const semiMajorKm = Math.cbrt(GM / (nRadSec * nRadSec));
+  const meanAltKm = semiMajorKm - EARTH_RADIUS_KM;
+  if (satrec.ecco > 0.25) return "HEO";
+  if (Math.abs(meanAltKm - ORBIT_BOUNDARIES.GEO) < GEO_TOLERANCE_KM) return "GEO";
+  if (meanAltKm < ORBIT_BOUNDARIES.LEO_MAX) return "LEO";
+  if (meanAltKm < ORBIT_BOUNDARIES.MEO_MAX) return "MEO";
   return "HEO";
 }
 
@@ -75,6 +96,5 @@ export function orbitalPeriodMin(noRadsPerMin: number): number {
 
 // Approximate circular orbital velocity km/s
 export function orbitalVelocityKms(altKm: number): number {
-  const GM = 398600.4418;
-  return Math.sqrt(GM / (6371 + altKm));
+  return Math.sqrt(GM / (EARTH_RADIUS_KM + altKm));
 }

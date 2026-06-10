@@ -2,15 +2,20 @@
 import { useMemo } from "react";
 import { Line } from "@react-three/drei";
 import * as satellite from "satellite.js";
+import { useStore } from "@/hooks/useStore";
 import type { SatelliteRecord } from "@/types/satellite";
 import { getGroundTrack } from "@/lib/coordinates";
 
 interface Props {
   sat: SatelliteRecord;
-  simTime: Date;
 }
 
-export function GroundTrack({ sat, simTime }: Props) {
+export function GroundTrack({ sat }: Props) {
+  const simTime = useStore((s) => s.simTime);
+
+  // Recompute at most once per sim minute — the track shifts slowly and the
+  // 120-step propagation is too expensive to run on every time tick.
+  const simMinute = Math.floor(simTime.getTime() / 60_000);
   const points = useMemo(() => {
     try {
       const satrec = satellite.twoline2satrec(sat.line1, sat.line2);
@@ -20,7 +25,8 @@ export function GroundTrack({ sat, simTime }: Props) {
     } catch {
       return null;
     }
-  }, [sat.line1, sat.line2, simTime]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sat.line1, sat.line2, simMinute]);
 
   if (!points) return null;
 

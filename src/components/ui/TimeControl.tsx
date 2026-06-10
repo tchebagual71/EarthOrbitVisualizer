@@ -29,7 +29,12 @@ const PRESETS = [
 ];
 
 export function TimeControl() {
-  const { simTime, playing, timeSpeed, setPlaying, setTimeSpeed, setSimTime } = useStore();
+  const simTime = useStore((s) => s.simTime);
+  const playing = useStore((s) => s.playing);
+  const timeSpeed = useStore((s) => s.timeSpeed);
+  const setPlaying = useStore((s) => s.setPlaying);
+  const setTimeSpeed = useStore((s) => s.setTimeSpeed);
+  const setSimTime = useStore((s) => s.setSimTime);
 
   const dateStr = simTime.toISOString().replace("T", " ").slice(0, 19) + " UTC";
 

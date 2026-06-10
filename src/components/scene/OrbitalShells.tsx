@@ -83,7 +83,7 @@ export const SHELL_DEFS = [
 ];
 
 export function OrbitalShells() {
-  const { learningShell } = useStore();
+  const learningShell = useStore((s) => s.learningShell);
 
   return (
     <group>

@@ -3,15 +3,16 @@ import { useMemo } from "react";
 import { Line } from "@react-three/drei";
 import * as satellite from "satellite.js";
 import { getOrbitPath } from "@/lib/coordinates";
+import { useStore } from "@/hooks/useStore";
 import type { SatelliteRecord } from "@/types/satellite";
 import { CATEGORY_MAP } from "@/lib/categories";
 
 interface Props {
   sat: SatelliteRecord;
-  simTime: Date;
 }
 
-export function OrbitalPath({ sat, simTime }: Props) {
+export function OrbitalPath({ sat }: Props) {
+  const simTime = useStore((s) => s.simTime);
   const color = CATEGORY_MAP[sat.category]?.color ?? "#ffffff";
 
   const simMinute = Math.floor(simTime.getTime() / 60_000);

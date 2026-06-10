@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { OrbitCategory, SatelliteRecord } from "@/types/satellite";
 import type { TimeSpeed } from "@/lib/constants";
 import type { LaunchSiteType } from "@/lib/launchsites";
+import { setSimMs } from "@/lib/simClock";
 
 interface SceneVec3 { x: number; y: number; z: number; }
 
@@ -57,7 +58,12 @@ export const useStore = create<AppState>((set) => ({
   simTime: new Date(),
   timeSpeed: 1,
   playing: true,
-  setSimTime: (simTime) => set({ simTime }),
+  // Write-through: keeps the module-level sim clock (read per-frame by the
+  // scene) in sync whether this is a user scrub or a driver publish.
+  setSimTime: (simTime) => {
+    setSimMs(simTime.getTime());
+    set({ simTime });
+  },
   setTimeSpeed: (timeSpeed) => set({ timeSpeed }),
   setPlaying: (playing) => set({ playing }),
 

@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import * as satellite from "satellite.js";
 import { useStore } from "@/hooks/useStore";
-import { classifyAltitude, getTLEAgeHours, orbitalPeriodMin, orbitalVelocityKms } from "@/lib/tle";
+import { classifyAltitude, classifyOrbit, getTLEAgeHours, orbitalPeriodMin, orbitalVelocityKms } from "@/lib/tle";
 import { CATEGORY_MAP } from "@/lib/categories";
 
 function formatPeriod(min: number): string {
@@ -18,7 +18,15 @@ function formatAge(hours: number): { text: string; warn: boolean } {
 }
 
 export function InfoPanel() {
-  const { selectedSat, setSelectedSat, showOrbitPath, setShowOrbitPath, showGroundTrack, setShowGroundTrack, showSatTrail, setShowSatTrail, simTime } = useStore();
+  const selectedSat = useStore((s) => s.selectedSat);
+  const setSelectedSat = useStore((s) => s.setSelectedSat);
+  const showOrbitPath = useStore((s) => s.showOrbitPath);
+  const setShowOrbitPath = useStore((s) => s.setShowOrbitPath);
+  const showGroundTrack = useStore((s) => s.showGroundTrack);
+  const setShowGroundTrack = useStore((s) => s.setShowGroundTrack);
+  const showSatTrail = useStore((s) => s.showSatTrail);
+  const setShowSatTrail = useStore((s) => s.setShowSatTrail);
+  const simTime = useStore((s) => s.simTime);
 
   const derived = useMemo(() => {
     if (!selectedSat) return null;
@@ -27,7 +35,7 @@ export function InfoPanel() {
       const periodMin = orbitalPeriodMin(satrec.no);
       const velocity = orbitalVelocityKms(selectedSat.altitude);
       const ageHours = getTLEAgeHours(selectedSat.line1, simTime);
-      return { periodMin, velocity, ageHours };
+      return { periodMin, velocity, ageHours, orbitClass: classifyOrbit(satrec) };
     } catch {
       return null;
     }
@@ -36,7 +44,8 @@ export function InfoPanel() {
   if (!selectedSat) return null;
 
   const group = CATEGORY_MAP[selectedSat.category];
-  const orbitClass = classifyAltitude(selectedSat.altitude);
+  // Mean-element classification when available; altitude snapshot as fallback
+  const orbitClass = derived?.orbitClass ?? classifyAltitude(selectedSat.altitude);
   const age = derived ? formatAge(derived.ageHours) : null;
 
   return (

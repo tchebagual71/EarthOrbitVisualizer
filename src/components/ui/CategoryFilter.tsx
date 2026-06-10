@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 import type { OrbitCategory } from "@/types/satellite";
 
 function CategoryRow({ group }: { group: (typeof CELESTRAK_GROUPS)[number] }) {
-  const { enabledCategories, toggleCategory } = useStore();
-  const { satellites, isLoading, error } = useTLEData(group.id as OrbitCategory);
+  const enabledCategories = useStore((s) => s.enabledCategories);
+  const toggleCategory = useStore((s) => s.toggleCategory);
   const enabled = enabledCategories.has(group.id as OrbitCategory);
+  const { satellites, isLoading, error } = useTLEData(group.id as OrbitCategory, enabled);
 
   return (
     <button

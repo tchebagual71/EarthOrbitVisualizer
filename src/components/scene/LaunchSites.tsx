@@ -161,7 +161,7 @@ function SiteMarker({ site, showLabels }: MarkerProps) {
 }
 
 export function LaunchSites() {
-  const { enabledSiteTypes } = useStore();
+  const enabledSiteTypes = useStore((s) => s.enabledSiteTypes);
   const [showLabels, setShowLabels] = useState(false);
   const camDistRef = useRef(25);
   const labelStateRef = useRef(false);

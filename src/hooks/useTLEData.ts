@@ -1,4 +1,5 @@
 "use client";
+import { useMemo } from "react";
 import useSWR from "swr";
 import type { SatelliteRecord, OrbitCategory } from "@/types/satellite";
 
@@ -13,41 +14,50 @@ const SWR_OPTS = {
   dedupingInterval: 3600_000,
 };
 
+// Stable empty array so disabled/unloaded categories don't churn identity
+const NO_SATELLITES: SatelliteRecord[] = [];
+
 export interface TLEDataResult {
   satellites: SatelliteRecord[];
   isLoading: boolean;
   error: Error | null;
 }
 
-// Single-category hook — safe to call unconditionally
-export function useTLEData(category: OrbitCategory): TLEDataResult {
+// Single-category hook — safe to call unconditionally. Pass enabled=false to
+// skip fetching (SWR null key) while keeping the hook call in place.
+export function useTLEData(category: OrbitCategory, enabled = true): TLEDataResult {
   const { data, error, isLoading } = useSWR<SatelliteRecord[]>(
-    `/api/satellites?category=${category}`,
+    enabled ? `/api/satellites?category=${category}` : null,
     fetcher,
     SWR_OPTS
   );
-  return { satellites: data ?? [], isLoading, error: error ?? null };
+  return useMemo(
+    () => ({ satellites: data ?? NO_SATELLITES, isLoading, error: error ?? null }),
+    [data, isLoading, error]
+  );
 }
 
-// Always calls all 7 hooks (fixed count) — filters by enabled set after
+// Always calls all 7 hooks (fixed count) — disabled categories use a null SWR
+// key so they aren't fetched. The merged result is memoized: consumers receive
+// a stable array identity unless the underlying data or enabled set changes.
 export function useAllTLEData(enabled: Set<OrbitCategory>): TLEDataResult {
-  const stations = useTLEData("stations");
-  const starlink = useTLEData("starlink");
-  const gps      = useTLEData("gps");
-  const weather  = useTLEData("weather");
-  const geo      = useTLEData("geo");
-  const amateur  = useTLEData("amateur");
-  const debris   = useTLEData("debris");
+  const stations = useTLEData("stations", enabled.has("stations"));
+  const starlink = useTLEData("starlink", enabled.has("starlink"));
+  const gps      = useTLEData("gps",      enabled.has("gps"));
+  const weather  = useTLEData("weather",  enabled.has("weather"));
+  const geo      = useTLEData("geo",      enabled.has("geo"));
+  const amateur  = useTLEData("amateur",  enabled.has("amateur"));
+  const debris   = useTLEData("debris",   enabled.has("debris"));
 
-  const all: Record<OrbitCategory, TLEDataResult> = {
-    stations, starlink, gps, weather, geo, amateur, debris,
-  };
-
-  const active = (Object.keys(all) as OrbitCategory[]).filter((c) => enabled.has(c));
-  const satellites = active.flatMap((c) => all[c].satellites);
-  const isLoading  = active.some((c) => all[c].isLoading);
-  const errorEntry = active.find((c) => all[c].error);
-  const error      = errorEntry ? all[errorEntry].error : null;
-
-  return { satellites, isLoading, error };
+  return useMemo(() => {
+    const all: Record<OrbitCategory, TLEDataResult> = {
+      stations, starlink, gps, weather, geo, amateur, debris,
+    };
+    const active = (Object.keys(all) as OrbitCategory[]).filter((c) => enabled.has(c));
+    return {
+      satellites: active.flatMap((c) => all[c].satellites),
+      isLoading:  active.some((c) => all[c].isLoading),
+      error:      active.map((c) => all[c].error).find(Boolean) ?? null,
+    };
+  }, [stations, starlink, gps, weather, geo, amateur, debris, enabled]);
 }

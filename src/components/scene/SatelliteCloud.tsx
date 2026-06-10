@@ -4,24 +4,22 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import * as satellite from "satellite.js";
 import { propagateAt } from "@/lib/coordinates";
+import { getSimTime } from "@/lib/simClock";
 import type { SatelliteRecord } from "@/types/satellite";
 import { SAT_MARKER_SIZE } from "@/lib/constants";
 import { CATEGORY_MAP } from "@/lib/categories";
 
 interface Props {
   satellites: SatelliteRecord[];
-  simTime: Date;
   // Shared buffer: [x0,y0,z0, x1,y1,z1, ...] updated every frame
   // index i is valid only when posValid[i] === 1
   positionsRef: React.MutableRefObject<Float32Array>;
   posValidRef: React.MutableRefObject<Uint8Array>;
 }
 
-export function SatelliteCloud({ satellites, simTime, positionsRef, posValidRef }: Props) {
+export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const simTimeRef = useRef(simTime);
-  simTimeRef.current = simTime;
 
   const satrecCache = useMemo(
     () =>
@@ -47,7 +45,7 @@ export function SatelliteCloud({ satellites, simTime, positionsRef, posValidRef 
   useFrame(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
-    const now = simTimeRef.current;
+    const now = getSimTime();
 
     // Resize shared buffers if satellite count changed
     if (positionsRef.current.length !== satellites.length * 3) {
