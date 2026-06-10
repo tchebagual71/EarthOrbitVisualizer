@@ -58,21 +58,11 @@ function SiteMarker({ site, showLabels }: MarkerProps) {
 
       {/* Persistent name label — visible when zoomed in close */}
       {showLabels && (
-        <Html distanceFactor={14} occlude style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
-          <div style={{
-            background: `${baseColor}1a`,
-            border: `1px solid ${baseColor}50`,
-            borderRadius: 4,
-            padding: "1px 5px",
-            color: baseColor,
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            transform: "translate(-50%, -220%)",
-            backdropFilter: "blur(4px)",
-            whiteSpace: "nowrap",
-          }}>
+        <Html distanceFactor={14} occlude className="pointer-events-none whitespace-nowrap">
+          <div
+            className="-translate-x-1/2 -translate-y-[220%] whitespace-nowrap rounded border px-[5px] py-px text-[9px] font-bold uppercase tracking-[0.04em] backdrop-blur-sm"
+            style={{ background: `${baseColor}1a`, borderColor: `${baseColor}50`, color: baseColor }}
+          >
             {site.shortName}
           </div>
         </Html>
@@ -83,71 +73,47 @@ function SiteMarker({ site, showLabels }: MarkerProps) {
         <Html
           distanceFactor={12}
           occlude
-          style={{ pointerEvents: selected ? "auto" : "none" }}
+          className={selected ? "pointer-events-auto" : "pointer-events-none"}
         >
-          <div style={{
-            background: "rgba(2,6,23,0.96)",
-            border: `1px solid ${baseColor}55`,
-            borderRadius: 10,
-            padding: "9px 13px",
-            color: "#f1f5f9",
-            fontSize: 11,
-            minWidth: 200,
-            maxWidth: 265,
-            boxShadow: `0 6px 32px rgba(0,0,0,0.85), 0 0 0 1px ${baseColor}15`,
-            backdropFilter: "blur(12px)",
-            transform: "translate(-50%, calc(-100% - 18px))",
-          }}>
+          <div
+            className="-translate-x-1/2 translate-y-[calc(-100%-18px)] min-w-[200px] max-w-[265px] rounded-[10px] border bg-[rgba(2,6,23,0.96)] px-[13px] py-[9px] text-[11px] text-slate-100 backdrop-blur-xl"
+            style={{
+              borderColor: `${baseColor}55`,
+              boxShadow: `0 6px 32px rgba(0,0,0,0.85), 0 0 0 1px ${baseColor}15`,
+            }}
+          >
             {/* Type badge + coords */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <span style={{
-                background: `${baseColor}22`,
-                color: baseColor,
-                border: `1px solid ${baseColor}55`,
-                borderRadius: 4,
-                padding: "1px 6px",
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-              }}>
+            <div className="mb-1 flex items-center gap-1.5">
+              <span
+                className="rounded border px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.06em]"
+                style={{ background: `${baseColor}22`, color: baseColor, borderColor: `${baseColor}55` }}
+              >
                 {SITE_TYPE_LABEL[site.type]}
               </span>
-              <span style={{ color: "#475569", fontSize: 9 }}>
+              <span className="text-[9px] text-slate-600">
                 {Math.abs(site.lat).toFixed(2)}°{site.lat >= 0 ? "N" : "S"}{" "}
                 {Math.abs(site.lon).toFixed(2)}°{site.lon >= 0 ? "E" : "W"}
               </span>
             </div>
 
             {/* Name */}
-            <div style={{ fontWeight: 700, fontSize: 12, color: "#f8fafc", marginBottom: 2, lineHeight: 1.3 }}>
+            <div className="mb-0.5 text-xs font-bold leading-snug text-slate-50">
               {site.name}
             </div>
-            <div style={{ color: "#94a3b8", fontSize: 10, marginBottom: selected ? 0 : 0 }}>
+            <div className="text-[10px] text-slate-400">
               {site.country} · {site.agency} · est.&nbsp;{site.firstLaunch}
             </div>
 
             {/* Description expands on click */}
             {selected && (
               <>
-                <div style={{ borderTop: "1px solid rgba(148,163,184,0.12)", margin: "7px 0" }} />
-                <div style={{ color: "#cbd5e1", fontSize: 10, lineHeight: 1.65 }}>
+                <div className="my-[7px] border-t border-slate-400/10" />
+                <div className="text-[10px] leading-[1.65] text-slate-300">
                   {site.description}
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelected(false); }}
-                  style={{
-                    marginTop: 8,
-                    background: "rgba(148,163,184,0.08)",
-                    border: "1px solid rgba(148,163,184,0.18)",
-                    borderRadius: 4,
-                    color: "#64748b",
-                    fontSize: 9,
-                    padding: "2px 8px",
-                    cursor: "pointer",
-                    display: "block",
-                    width: "100%",
-                  }}
+                  className="mt-2 block w-full cursor-pointer rounded border border-slate-400/20 bg-slate-400/10 px-2 py-0.5 text-[9px] text-slate-500 hover:text-slate-300 transition-colors"
                 >
                   close ×
                 </button>

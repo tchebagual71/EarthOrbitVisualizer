@@ -11,8 +11,8 @@ export const ORBIT_BOUNDARIES = {
   GEO: 35786,
 } as const;
 
-// How many seconds one "real" second represents at each speed
-export const TIME_SPEEDS = [0, 1, 10, 60, 300, 3600] as const;
+// How many seconds one "real" second represents at each speed (negative = rewind)
+export const TIME_SPEEDS = [-60, 0, 1, 10, 60, 300, 3600] as const;
 export type TimeSpeed = (typeof TIME_SPEEDS)[number];
 
 export const CELESTRAK_BASE = "https://celestrak.org/SOCRATES/query.php";

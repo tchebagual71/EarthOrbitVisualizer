@@ -44,20 +44,12 @@ export function LearningCard() {
 
       {/* Card */}
       <div
-        className="absolute z-50 flex flex-col rounded-2xl overflow-hidden shadow-2xl"
-        style={{
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "min(92vw, 480px)",
-          maxHeight: "min(90vh, 680px)",
-          background: "rgba(2, 6, 23, 0.97)",
-          border: `1px solid ${shell.color}30`,
-        }}
+        className="absolute z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex w-[min(92vw,480px)] max-h-[min(90vh,680px)] flex-col overflow-hidden rounded-2xl border bg-[rgba(2,6,23,0.97)] shadow-2xl"
+        style={{ borderColor: `${shell.color}30` }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Color accent bar */}
-        <div style={{ height: 3, background: shell.color, opacity: 0.85, flexShrink: 0 }} />
+        <div className="h-[3px] flex-shrink-0 opacity-85" style={{ background: shell.color }} />
 
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 p-5">
@@ -79,7 +71,7 @@ export function LearningCard() {
           </div>
 
           {/* Title */}
-          <h2 className="text-lg font-bold text-white leading-snug mb-1" style={{ color: "#f8fafc" }}>
+          <h2 className="text-lg font-bold text-slate-50 leading-snug mb-1">
             {shell.label}
           </h2>
           <p className="text-xs text-slate-500 mb-4">{shell.altKm.toLocaleString()} km altitude above Earth&apos;s surface</p>
@@ -104,7 +96,7 @@ export function LearningCard() {
               <ul className="space-y-1.5">
                 {shell.facts.map((fact, i) => (
                   <li key={i} className="flex gap-2 text-xs text-slate-300 leading-relaxed">
-                    <span style={{ color: shell.color, flexShrink: 0 }}>›</span>
+                    <span className="flex-shrink-0" style={{ color: shell.color }}>›</span>
                     {fact}
                   </li>
                 ))}
@@ -128,10 +120,7 @@ export function LearningCard() {
         </div>
 
         {/* Navigation footer */}
-        <div
-          className="flex items-center justify-between px-5 py-3 flex-shrink-0"
-          style={{ borderTop: "1px solid rgba(148,163,184,0.10)" }}
-        >
+        <div className="flex items-center justify-between px-5 py-3 flex-shrink-0 border-t border-slate-400/10">
           <button
             onClick={prev}
             className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-700/50"

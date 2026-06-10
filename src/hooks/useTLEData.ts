@@ -21,19 +21,25 @@ export interface TLEDataResult {
   satellites: SatelliteRecord[];
   isLoading: boolean;
   error: Error | null;
+  retry: () => void;
 }
 
 // Single-category hook — safe to call unconditionally. Pass enabled=false to
 // skip fetching (SWR null key) while keeping the hook call in place.
 export function useTLEData(category: OrbitCategory, enabled = true): TLEDataResult {
-  const { data, error, isLoading } = useSWR<SatelliteRecord[]>(
+  const { data, error, isLoading, mutate } = useSWR<SatelliteRecord[]>(
     enabled ? `/api/satellites?category=${category}` : null,
     fetcher,
     SWR_OPTS
   );
   return useMemo(
-    () => ({ satellites: data ?? NO_SATELLITES, isLoading, error: error ?? null }),
-    [data, isLoading, error]
+    () => ({
+      satellites: data ?? NO_SATELLITES,
+      isLoading,
+      error: error ?? null,
+      retry: () => void mutate(),
+    }),
+    [data, isLoading, error, mutate]
   );
 }
 
@@ -58,6 +64,7 @@ export function useAllTLEData(enabled: Set<OrbitCategory>): TLEDataResult {
       satellites: active.flatMap((c) => all[c].satellites),
       isLoading:  active.some((c) => all[c].isLoading),
       error:      active.map((c) => all[c].error).find(Boolean) ?? null,
+      retry:      () => active.forEach((c) => { if (all[c].error) all[c].retry(); }),
     };
   }, [stations, starlink, gps, weather, geo, amateur, debris, enabled]);
 }

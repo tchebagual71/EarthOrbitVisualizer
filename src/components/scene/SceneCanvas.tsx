@@ -29,7 +29,7 @@ function SimClockDriver() {
 
   useFrame((_, delta) => {
     const { playing, timeSpeed, setSimTime } = useStore.getState();
-    if (playing && timeSpeed > 0) {
+    if (playing && timeSpeed !== 0) {
       // Cap delta so a backgrounded tab doesn't fast-forward on refocus
       advanceSimMs(Math.min(delta, 0.1) * 1000 * timeSpeed);
     }

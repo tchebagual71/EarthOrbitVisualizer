@@ -1,5 +1,6 @@
 "use client";
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { OrbitCategory, SatelliteRecord } from "@/types/satellite";
 import type { TimeSpeed } from "@/lib/constants";
 import type { LaunchSiteType } from "@/lib/launchsites";
@@ -54,7 +55,30 @@ interface AppState {
   setJumpPosition: (p: SceneVec3 | null) => void;
 }
 
-export const useStore = create<AppState>((set) => ({
+// Subset of state persisted to localStorage across sessions
+type PersistedPrefs = Pick<
+  AppState,
+  | "enabledCategories"
+  | "enabledSiteTypes"
+  | "showLaunchSites"
+  | "showOrbitPath"
+  | "showGroundTrack"
+  | "showSatTrail"
+>;
+
+// JSON can't encode Sets — round-trip them through a tagged array
+const prefsStorage = createJSONStorage<PersistedPrefs>(() => localStorage, {
+  replacer: (_key, value) =>
+    value instanceof Set ? { __set: Array.from(value) } : value,
+  reviver: (_key, value) =>
+    value && typeof value === "object" && "__set" in value
+      ? new Set((value as { __set: unknown[] }).__set)
+      : value,
+});
+
+export const useStore = create<AppState>()(
+  persist(
+    (set) => ({
   simTime: new Date(),
   timeSpeed: 1,
   playing: true,
@@ -114,4 +138,22 @@ export const useStore = create<AppState>((set) => ({
   setJumpTarget: (jumpTarget) => set({ jumpTarget }),
   jumpPosition: null,
   setJumpPosition: (jumpPosition) => set({ jumpPosition }),
-}));
+    }),
+    {
+      name: "eov-preferences",
+      version: 1,
+      storage: prefsStorage,
+      partialize: (s): PersistedPrefs => ({
+        enabledCategories: s.enabledCategories,
+        enabledSiteTypes: s.enabledSiteTypes,
+        showLaunchSites: s.showLaunchSites,
+        showOrbitPath: s.showOrbitPath,
+        showGroundTrack: s.showGroundTrack,
+        showSatTrail: s.showSatTrail,
+      }),
+      // Rehydrated manually after mount (see page.tsx) to avoid SSR/client
+      // markup mismatches from reading localStorage during initial render.
+      skipHydration: true,
+    }
+  )
+);

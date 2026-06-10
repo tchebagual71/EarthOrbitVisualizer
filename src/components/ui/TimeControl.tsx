@@ -4,6 +4,7 @@ import { TIME_SPEEDS, type TimeSpeed } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const SPEED_LABELS: Record<TimeSpeed, string> = {
+  [-60]: "−1m/s",
   0: "⏸",
   1: "1×",
   10: "10×",
@@ -13,6 +14,7 @@ const SPEED_LABELS: Record<TimeSpeed, string> = {
 };
 
 const SPEED_LABELS_SHORT: Record<TimeSpeed, string> = {
+  [-60]: "−1m",
   0: "⏸",
   1: "1×",
   10: "10×",
@@ -20,6 +22,10 @@ const SPEED_LABELS_SHORT: Record<TimeSpeed, string> = {
   300: "5m",
   3600: "1h",
 };
+
+// TLEs are fetched fresh, so their epochs cluster around the present;
+// SGP4 accuracy degrades meaningfully beyond about a week from epoch.
+const TLE_VALID_DAYS = 7;
 
 const PRESETS = [
   { label: "Now",  delta: 0 },
@@ -38,6 +44,9 @@ export function TimeControl() {
 
   const dateStr = simTime.toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
+  const offsetDays = Math.abs(simTime.getTime() - Date.now()) / 86_400_000;
+  const beyondTLEValidity = offsetDays > TLE_VALID_DAYS;
+
   const handlePreset = (delta: number) => {
     const t = delta === 0 ? new Date() : new Date(Date.now() + delta);
     setSimTime(t);
@@ -49,6 +58,18 @@ export function TimeControl() {
       className="absolute left-1/2 -translate-x-1/2 z-20"
       style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
     >
+      {/* TLE validity warning */}
+      {beyondTLEValidity && (
+        <div className="flex justify-center mb-1.5">
+          <span
+            role="status"
+            className="rounded-lg bg-amber-900/70 border border-amber-700/40 px-2.5 py-1 text-[10px] text-amber-300 backdrop-blur-sm"
+          >
+            ⚠ {Math.round(offsetDays).toLocaleString()} days from present — satellite positions are extrapolated beyond TLE accuracy
+          </span>
+        </div>
+      )}
+
       {/* Time presets row */}
       <div className="flex justify-center gap-1 mb-1.5">
         {PRESETS.map(({ label, delta }) => (

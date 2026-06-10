@@ -29,7 +29,7 @@ export function ControlPanel() {
   const setShowSearch = useStore((s) => s.setShowSearch);
   const learningShell = useStore((s) => s.learningShell);
   const setLearningShell = useStore((s) => s.setLearningShell);
-  const { satellites, isLoading } = useAllTLEData(enabledCategories);
+  const { satellites, isLoading, error, retry } = useAllTLEData(enabledCategories);
   const [collapsed, setCollapsed] = useState(false);
   const [sitesOpen, setSitesOpen] = useState(true);
   const [shellsOpen, setShellsOpen] = useState(true);
@@ -96,6 +96,7 @@ export function ControlPanel() {
             onClick={() => setShowSearch(true)}
             className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:text-slate-200 hover:bg-slate-700/50 transition-colors text-xs"
             title="Search satellites or launch sites  ( / )"
+            aria-label="Search satellites or launch sites"
           >
             🔍
           </button>
@@ -120,6 +121,18 @@ export function ControlPanel() {
         </span>
       </div>
 
+      {/* Data fetch failure banner */}
+      {error && !isLoading && (
+        <div className="px-4 pb-2 -mt-2">
+          <button
+            onClick={retry}
+            className="text-[10px] text-red-400 hover:text-red-200 transition-colors text-left"
+          >
+            ⚠ some satellite data failed to load — tap to retry
+          </button>
+        </div>
+      )}
+
       {/* Satellite categories */}
       <div className="px-3 pb-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5 px-1">
@@ -130,39 +143,38 @@ export function ControlPanel() {
 
       {/* Launch sites section */}
       <div className="border-t border-slate-700/50 px-3 py-2">
-        {/* Section header with master toggle */}
-        <button
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => setSitesOpen((o) => !o)}
-          className="flex items-center justify-between w-full mb-1.5 group"
-        >
-          <div className="flex items-center gap-2">
+        {/* Section header: collapse button + separate master toggle (no nested
+            interactive elements — the toggle is a real, keyboard-reachable switch) */}
+        <div className="flex items-center justify-between w-full mb-1.5 gap-1.5">
+          <button
+            onClick={() => setSitesOpen((o) => !o)}
+            aria-expanded={sitesOpen}
+            className="flex flex-1 items-center gap-2 group text-left"
+          >
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors">
               Launch Sites
             </span>
             <span className="text-[10px] text-slate-600 tabular-nums">
               ({LAUNCH_SITES.filter((s) => enabledSiteTypes.has(s.type)).length})
             </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {/* Master on/off */}
-            <span
-              role="checkbox"
-              aria-checked={showLaunchSites}
-              onClick={(e) => { e.stopPropagation(); setShowLaunchSites(!showLaunchSites); }}
-              className={cn(
-                "w-7 h-4 rounded-full transition-colors relative cursor-pointer",
-                showLaunchSites ? "bg-amber-500" : "bg-slate-700"
-              )}
-            >
-              <span className={cn(
-                "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform shadow",
-                showLaunchSites ? "translate-x-3.5" : "translate-x-0.5"
-              )} />
-            </span>
-            <span className="text-slate-600 text-xs">{sitesOpen ? "▾" : "▸"}</span>
-          </div>
-        </button>
+            <span className="text-slate-600 text-xs ml-auto">{sitesOpen ? "▾" : "▸"}</span>
+          </button>
+          <button
+            role="switch"
+            aria-checked={showLaunchSites}
+            aria-label="Show launch sites on the globe"
+            onClick={() => setShowLaunchSites(!showLaunchSites)}
+            className={cn(
+              "w-7 h-4 rounded-full transition-colors relative cursor-pointer flex-shrink-0",
+              showLaunchSites ? "bg-amber-500" : "bg-slate-700"
+            )}
+          >
+            <span className={cn(
+              "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform shadow",
+              showLaunchSites ? "translate-x-3.5" : "translate-x-0.5"
+            )} />
+          </button>
+        </div>
 
         {sitesOpen && showLaunchSites && (
           <div className="space-y-0.5">

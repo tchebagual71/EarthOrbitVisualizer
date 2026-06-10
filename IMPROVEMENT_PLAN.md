@@ -109,12 +109,12 @@ Enabled categories, launch-site toggles, and trail/orbit/track switches reset on
 7. ~~GitHub Actions workflow~~ — `.github/workflows/ci.yml`: type-check → lint → test → build on PRs and pushes to `main`; `lint` script migrated from deprecated `next lint` to the ESLint CLI with flat-config ignores (Q2, Q8).
 8. ~~Rewrite CLAUDE.md to match reality; flesh out README~~ (Q3, Q10).
 
-### Phase C — Visual & UX correctness
-9. Day/night terminator shader for Earth; rotating cloud layer (F6).
-10. Error boundary around the canvas + per-category retry UI (F3).
-11. TLE-validity warning in time controls; optional reverse speeds (F4).
-12. Persist preferences with Zustand `persist` (F7).
-13. Accessibility pass (Q9) and inline-style cleanup (Q5).
+### Phase C — Visual & UX correctness ✅ DONE
+9. ~~Day/night terminator shader~~ — `onBeforeCompile` patch on the Phong material gates the night-lights emissive map by view-space sun angle (smoothstep across the terminator), keeping the stock lighting/normal-map pipeline; cloud layer drifts deterministically with sim time (F6).
+10. ~~Error boundary + retry UI~~ — `ErrorBoundary` wraps the canvas with a reload fallback; `useTLEData` exposes `retry()` (SWR mutate); per-category "⟳ retry" buttons in `CategoryFilter` and a failed-load banner in `ControlPanel` (F3).
+11. ~~TLE-validity warning~~ — TimeControl shows an amber banner when |simTime − now| > 7 days; added a −1 min/s rewind speed (F4).
+12. ~~Persist preferences~~ — Zustand `persist` (localStorage) for category/site-type sets and overlay toggles, with Set⇄array serialization and `skipHydration` + post-mount rehydrate to avoid SSR mismatches (F7).
+13. ~~Accessibility + inline styles~~ — launch-sites master toggle is now a real keyboard-reachable `role="switch"` button (was a checkbox-span nested inside a button); aria labels/pressed/expanded added; static inline styles in `LaunchSites`/`LearningCard` converted to Tailwind — only per-type dynamic colors remain inline, by necessity (Q9, Q5).
 
 ### Phase D — Scale & PWA
 14. Web Worker SGP4 propagation with transferable position buffers (C6) — unlocks the 5k-satellite/60 fps target and full Starlink display.

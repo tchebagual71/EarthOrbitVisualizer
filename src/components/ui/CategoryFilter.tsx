@@ -9,30 +9,45 @@ function CategoryRow({ group }: { group: (typeof CELESTRAK_GROUPS)[number] }) {
   const enabledCategories = useStore((s) => s.enabledCategories);
   const toggleCategory = useStore((s) => s.toggleCategory);
   const enabled = enabledCategories.has(group.id as OrbitCategory);
-  const { satellites, isLoading, error } = useTLEData(group.id as OrbitCategory, enabled);
+  const { satellites, isLoading, error, retry } = useTLEData(group.id as OrbitCategory, enabled);
 
   return (
-    <button
-      onClick={() => toggleCategory(group.id as OrbitCategory)}
+    <div
       className={cn(
-        // 44px min height for Apple HIG touch target
-        "flex items-center gap-2 rounded-md px-2 min-h-[44px] text-sm transition-colors w-full text-left",
+        "flex items-center rounded-md min-h-[44px] text-sm transition-colors w-full",
         enabled
           ? "bg-slate-800/70 text-slate-100"
           : "text-slate-500 hover:bg-slate-800/40 hover:text-slate-300 active:bg-slate-800/60"
       )}
     >
-      <span
-        className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-        style={{ background: enabled ? group.color : "#475569" }}
-      />
-      <span className="flex-1">{group.label}</span>
-      {enabled && (
-        <span className="text-[10px] tabular-nums text-slate-500 ml-auto">
-          {isLoading ? "…" : error ? "err" : satellites.length}
-        </span>
+      <button
+        onClick={() => toggleCategory(group.id as OrbitCategory)}
+        aria-pressed={enabled}
+        // 44px min height for Apple HIG touch target
+        className="flex flex-1 items-center gap-2 px-2 min-h-[44px] text-left"
+      >
+        <span
+          className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+          style={{ background: enabled ? group.color : "#475569" }}
+        />
+        <span className="flex-1">{group.label}</span>
+        {enabled && !error && (
+          <span className="text-[10px] tabular-nums text-slate-500 ml-auto">
+            {isLoading ? "…" : satellites.length}
+          </span>
+        )}
+      </button>
+      {enabled && error && (
+        <button
+          onClick={retry}
+          className="mr-1.5 rounded px-1.5 py-1 text-[10px] text-red-400 hover:text-red-200 hover:bg-red-900/40 transition-colors flex-shrink-0"
+          title={`Failed to load: ${error.message}`}
+          aria-label={`Retry loading ${group.label}`}
+        >
+          ⟳ retry
+        </button>
       )}
-    </button>
+    </div>
   );
 }
 

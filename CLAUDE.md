@@ -179,7 +179,7 @@ CI (`.github/workflows/ci.yml`) runs type-check → lint → test → build on P
 - **Zustand: selector subscriptions only** — `useStore((s) => s.field)`, never bare `useStore()` destructuring (whole-store subscription causes app-wide re-renders)
 - **Per-frame data lives outside React state** — refs, module state (`simClock`), shared typed arrays (`positionsRef`)
 - **Orbital math utilities** are pure functions in `src/lib/` with co-located `*.test.ts`
-- **Tailwind classes** preferred over inline styles (legacy inline styles remain in `LaunchSites`/`LearningCard` — cleanup tracked in IMPROVEMENT_PLAN.md Q5)
+- **Tailwind classes** for all static styling; inline `style` only for values that are genuinely dynamic (per-category/per-type colors)
 - **Commit messages:** `feat:`, `fix:`, `chore:`, `docs:` prefixes
 
 ---
@@ -202,9 +202,10 @@ CI (`.github/workflows/ci.yml`) runs type-check → lint → test → build on P
 ## Known Constraints & Decisions
 
 - **CelesTrak rate limits:** generous but not unlimited; CDN cache (1 hr) prevents abuse. Dev-server requests bypass the CDN cache.
-- **TLE accuracy:** SGP4 is ~1 km over short periods; degrades over days. InfoPanel shows a staleness warning past 7 days. Time presets can exceed TLE validity (warning UI tracked as F4).
+- **TLE accuracy:** SGP4 is ~1 km over short periods; degrades over days. InfoPanel shows a staleness warning past 7 days; TimeControl shows a banner when sim time is > 7 days from the present.
 - **`satellite.propagate()` returns no/boolean position for decayed satellites** — always check before rendering (`propagateAt` returns `null`). `twoline2satrec` does **not** throw on malformed lines; it yields NaN propagation — `tleToSatelliteRecord` rejects non-finite results.
-- **Earth textures:** NASA Blue Marble (public domain). Night lights are currently a uniform emissive map (day/night terminator shader tracked as F6).
+- **Earth textures:** NASA Blue Marble (public domain). Night lights are gated to the dark side via an `onBeforeCompile` Phong patch in `Earth.tsx` (uniform `uSunDirView`, view space, updated per frame).
+- **User prefs persist** to localStorage (`eov-preferences`) via Zustand `persist` with `skipHydration` — rehydrated after mount in `page.tsx`. Sets serialize through a tagged-array replacer/reviver.
 - **No WebGPU:** stick with WebGL2.
 
 ---
@@ -215,5 +216,5 @@ Tracked in `IMPROVEMENT_PLAN.md`:
 
 - [x] Phase A — correctness & frame-rate fixes (sim clock, selectors, memoization, classification)
 - [x] Phase B — Vitest suite, CI workflow, documentation rewrite
-- [ ] Phase C — day/night shader, error boundaries, TLE-validity warnings, persisted prefs, a11y
+- [x] Phase C — day/night shader, error boundaries, TLE-validity warnings, persisted prefs, a11y
 - [ ] Phase D — Web Worker propagation, service worker/PWA, category-config consolidation
