@@ -6,7 +6,12 @@ const GP = (group: string) =>
 const SUP = (file: string) =>
   `https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=${file}&FORMAT=tle`;
 
-export const CELESTRAK_GROUPS: CelestrakGroup[] = [
+// Single source of truth for satellite categories. OrbitCategory, the default
+// enabled set (useStore), and CATEGORY_MAP all derive from this list; the
+// per-category hooks in useAllTLEData are exhaustiveness-checked against
+// OrbitCategory, so adding an entry here turns every remaining required
+// change into a compile error rather than a silent omission.
+export const CELESTRAK_GROUPS = [
   {
     id: "stations",
     label: "Space Stations",
@@ -56,8 +61,14 @@ export const CELESTRAK_GROUPS: CelestrakGroup[] = [
     color: "#94a3b8",
     maxDisplay: 500,
   },
-];
+] as const;
+
+export type OrbitCategory = (typeof CELESTRAK_GROUPS)[number]["id"];
+
+export const ORBIT_CATEGORIES: readonly OrbitCategory[] = CELESTRAK_GROUPS.map(
+  (g) => g.id
+);
 
 export const CATEGORY_MAP = Object.fromEntries(
   CELESTRAK_GROUPS.map((g) => [g.id, g])
-) as Record<string, CelestrakGroup>;
+) as Record<OrbitCategory, CelestrakGroup>;

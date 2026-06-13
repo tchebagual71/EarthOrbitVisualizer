@@ -44,6 +44,44 @@ export function propagateAt(
   return eciToScene(result.position as satellite.EciVec3<number>, gmst);
 }
 
+// Batch-propagate satellites into shared typed arrays. Used by the
+// propagation Web Worker (and as a main-thread fallback): one gstime() per
+// batch, no per-satellite allocations beyond what satellite.js requires.
+// Writes scene coordinates into positions[i*3..i*3+2] and 1/0 into valid[i].
+export function propagateBatch(
+  satrecs: (satellite.SatRec | null)[],
+  date: Date,
+  positions: Float32Array,
+  valid: Uint8Array
+): void {
+  const gmst = satellite.gstime(date);
+  const n = Math.min(satrecs.length, valid.length, Math.floor(positions.length / 3));
+  for (let i = 0; i < n; i++) {
+    const satrec = satrecs[i];
+    if (!satrec) {
+      valid[i] = 0;
+      continue;
+    }
+    const result = satellite.propagate(satrec, date);
+    if (!result.position || typeof result.position === "boolean") {
+      valid[i] = 0;
+      continue;
+    }
+    const ecef = satellite.eciToEcf(result.position as satellite.EciVec3<number>, gmst);
+    const x = ecef.x / SCENE_SCALE_KM;
+    const y = ecef.z / SCENE_SCALE_KM;
+    const z = -ecef.y / SCENE_SCALE_KM;
+    if (!Number.isFinite(x + y + z)) {
+      valid[i] = 0;
+      continue;
+    }
+    positions[i * 3] = x;
+    positions[i * 3 + 1] = y;
+    positions[i * 3 + 2] = z;
+    valid[i] = 1;
+  }
+}
+
 export function getOrbitPath(
   satrec: satellite.SatRec,
   date: Date,

@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 import * as satellite from "satellite.js";
-import { latLonToScene, eciToScene, propagateAt, getOrbitPath, getGroundTrack } from "./coordinates";
+import {
+  latLonToScene,
+  eciToScene,
+  propagateAt,
+  propagateBatch,
+  getOrbitPath,
+  getGroundTrack,
+} from "./coordinates";
 import { EARTH_RADIUS_SCENE } from "./constants";
 
 const ISS_L1 = "1 25544U 98067A   08264.51782528 -.00002182  00000-0 -11606-4 0  2927";
@@ -66,6 +73,40 @@ describe("propagateAt", () => {
     // ~6,720 km geocentric → ~6.72 scene units
     expect(radius).toBeGreaterThan(6.6);
     expect(radius).toBeLessThan(6.9);
+  });
+});
+
+describe("propagateBatch", () => {
+  it("matches propagateAt for a valid satrec and flags null satrecs invalid", () => {
+    const satrec = satellite.twoline2satrec(ISS_L1, ISS_L2);
+    const positions = new Float32Array(3 * 3);
+    const valid = new Uint8Array(3);
+
+    propagateBatch([satrec, null, satrec], ISS_EPOCH, positions, valid);
+
+    expect(Array.from(valid)).toEqual([1, 0, 1]);
+    const single = propagateAt(satrec, ISS_EPOCH)!;
+    expect(positions[0]).toBeCloseTo(single.x, 4);
+    expect(positions[1]).toBeCloseTo(single.y, 4);
+    expect(positions[2]).toBeCloseTo(single.z, 4);
+    expect(positions[6]).toBeCloseTo(single.x, 4);
+  });
+
+  it("only writes within the smallest of list/buffer lengths", () => {
+    const satrec = satellite.twoline2satrec(ISS_L1, ISS_L2);
+    const positions = new Float32Array(3); // room for 1 satellite
+    const valid = new Uint8Array(1);
+    // Longer satrec list than buffers — must not throw or write out of bounds
+    propagateBatch([satrec, satrec, satrec], ISS_EPOCH, positions, valid);
+    expect(valid[0]).toBe(1);
+  });
+
+  it("marks NaN propagation results invalid", () => {
+    const junk = satellite.twoline2satrec("1 junk", "2 junk");
+    const positions = new Float32Array(3);
+    const valid = new Uint8Array([1]); // pre-set to ensure it's cleared
+    propagateBatch([junk], ISS_EPOCH, positions, valid);
+    expect(valid[0]).toBe(0);
   });
 });
 

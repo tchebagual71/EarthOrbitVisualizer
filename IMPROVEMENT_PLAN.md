@@ -116,9 +116,20 @@ Enabled categories, launch-site toggles, and trail/orbit/track switches reset on
 12. ~~Persist preferences~~ — Zustand `persist` (localStorage) for category/site-type sets and overlay toggles, with Set⇄array serialization and `skipHydration` + post-mount rehydrate to avoid SSR mismatches (F7).
 13. ~~Accessibility + inline styles~~ — launch-sites master toggle is now a real keyboard-reachable `role="switch"` button (was a checkbox-span nested inside a button); aria labels/pressed/expanded added; static inline styles in `LaunchSites`/`LearningCard` converted to Tailwind — only per-type dynamic colors remain inline, by necessity (Q9, Q5).
 
-### Phase D — Scale & PWA
-14. Web Worker SGP4 propagation with transferable position buffers (C6) — unlocks the 5k-satellite/60 fps target and full Starlink display.
-15. Service worker via `next-pwa`/`serwist`: app-shell + texture caching, last-good TLE fallback for offline (F1).
-16. Category-config consolidation (Q4) and remaining hygiene items (Q6, Q7, Q11, Q12).
+### Phase D — Scale & PWA ✅ DONE
+14. ~~Web Worker SGP4 propagation with transferable position buffers~~ — `src/workers/propagator.worker.ts` propagates off the main thread; position/valid `ArrayBuffer`s ping-pong via transfer (zero-copy). A shared `propagateBatch()` in `coordinates.ts` is used by both the worker and a main-thread fallback (when `Worker` is unavailable or errors), and is unit-tested. A generation guard discards stale responses after the satellite list changes (C6).
+15. ~~Service worker / PWA~~ — Serwist (`@serwist/next`) with `src/app/sw.ts`: precaches the app shell, cache-first for `/textures/*`, network-first with a 7-day fallback for `/api/satellites*` (last-good TLE offline). Disabled in dev to preserve hot reload; generated `public/sw.js` is gitignored (F1).
+16. ~~Category-config consolidation + hygiene~~ — `CELESTRAK_GROUPS` is now the single source of truth: `OrbitCategory` is derived from it (`typeof … [number]["id"]`), the default enabled set comes from `ORBIT_CATEGORIES`, and the per-category hooks in `useAllTLEData` are exhaustiveness-checked against the union (Q4). Removed the dead/incorrect `CELESTRAK_BASE` constant and fixed `orbitalVelocityKms` to use `EARTH_RADIUS_KM` (Q6); the API route now uses a type-guard filter (Q7), gained a module-level cache that spares CelesTrak on dev reloads and serves stale data when upstream is down (Q12); deleted the redundant `vercel.json` and set `metadataBase` to fix the build warning and OG image URLs (Q11, Q8).
 
 Each phase is independently shippable; Phase A alone should roughly double effective frame budget and fix the user-visible clock-speed bug.
+
+---
+
+## 6. Status
+
+All four phases (A–D) are complete. Every catalogued item (C1–C6, F1–F7, Q1–Q12) has been addressed, except the deliberately-deferred taste/visual passes noted inline (e.g. night-light color tuning), which need a browser to evaluate. `type-check`, `lint`, the 33-test Vitest suite, and `next build` all pass; a production-server smoke test confirms the page, generated `sw.js`, manifest, and API route all serve correctly.
+
+Remaining follow-ups worth tracking separately (out of original scope):
+- **Worker propagation is verified by build + unit tests, not in a live browser** — the transfer/ping-pong path and fallback should get a visual confirmation on a deployed preview, ideally with the full Starlink set enabled to validate the 5k-satellite/60fps target.
+- **PWA install + offline behaviour** likewise needs a real device/browser check (service workers don't run in the dev server).
+- **`npm audit`** reports a few advisories pulled in transitively by the Serwist toolchain — worth a periodic review.

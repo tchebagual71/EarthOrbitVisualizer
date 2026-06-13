@@ -15,7 +15,5 @@ export const ORBIT_BOUNDARIES = {
 export const TIME_SPEEDS = [-60, 0, 1, 10, 60, 300, 3600] as const;
 export type TimeSpeed = (typeof TIME_SPEEDS)[number];
 
-export const CELESTRAK_BASE = "https://celestrak.org/SOCRATES/query.php";
-
 // Satellite marker size in scene units
 export const SAT_MARKER_SIZE = 0.04;

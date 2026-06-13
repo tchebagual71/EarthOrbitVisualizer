@@ -6,6 +6,11 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: process.env.NEXT_PUBLIC_SITE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
+    : process.env.VERCEL_URL
+      ? new URL(`https://${process.env.VERCEL_URL}`)
+      : new URL("http://localhost:3000"),
   title: "Earth Orbit Visualizer",
   description:
     "Real-time 3D visualization of satellites and objects in Earth orbit — LEO, MEO, GEO, and beyond.",

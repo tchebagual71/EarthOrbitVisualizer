@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { OrbitCategory, SatelliteRecord } from "@/types/satellite";
+import { ORBIT_CATEGORIES } from "@/lib/categories";
 import type { TimeSpeed } from "@/lib/constants";
 import type { LaunchSiteType } from "@/lib/launchsites";
 import { setSimMs } from "@/lib/simClock";
@@ -100,9 +101,7 @@ export const useStore = create<AppState>()(
   showSatTrail: true,
   setShowSatTrail: (showSatTrail) => set({ showSatTrail }),
 
-  enabledCategories: new Set<OrbitCategory>([
-    "stations", "starlink", "gps", "weather", "geo", "amateur", "debris",
-  ]),
+  enabledCategories: new Set<OrbitCategory>(ORBIT_CATEGORIES),
   toggleCategory: (c) =>
     set((s) => {
       const next = new Set(s.enabledCategories);

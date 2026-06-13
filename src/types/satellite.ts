@@ -1,3 +1,8 @@
+// Derived from CELESTRAK_GROUPS — re-exported here so consumers keep a single
+// import site for satellite types (type-only cycle with categories.ts is fine).
+import type { OrbitCategory } from "@/lib/categories";
+export type { OrbitCategory } from "@/lib/categories";
+
 export interface TLERecord {
   name: string;
   line1: string;
@@ -14,15 +19,6 @@ export interface SatelliteRecord {
   inclination: number;
   altitude: number;
 }
-
-export type OrbitCategory =
-  | "stations"
-  | "starlink"
-  | "gps"
-  | "weather"
-  | "debris"
-  | "amateur"
-  | "geo";
 
 export interface SatellitePosition {
   id: string;
