@@ -123,6 +123,16 @@ Enabled categories, launch-site toggles, and trail/orbit/track switches reset on
 
 Each phase is independently shippable; Phase A alone should roughly double effective frame budget and fix the user-visible clock-speed bug.
 
+### Phase E — Mobile friendliness ✅ DONE
+A focused pass after the deploy fix, prioritising small-screen usability:
+- **Safe-area insets now actually work** — added `viewportFit: "cover"` to the viewport export. Without it, every existing `env(safe-area-inset-*)` rule resolved to 0 on notched phones.
+- **Dynamic viewport height** — the root uses `h-dvh` (with a `100dvh` CSS fallback on `main`) so the bottom time controls are never trapped behind the mobile URL bar (`100vh` overshoots the visible area).
+- **No iOS focus-zoom** — the search input moved to 16px (`text-base`); iOS auto-zooms inputs below 16px. Also disabled autocorrect/-capitalize on it.
+- **InfoPanel no longer covers the time controls** — on phones it's top-anchored and scrollable (was bottom-anchored at `5rem`, overlapping the taller TimeControl); desktop keeps the right-center placement.
+- **ControlPanel** starts collapsed on phones (globe unobstructed on first load) and gained `max-height` + scroll so a fully-expanded panel can't run off a short screen.
+- **TimeControl** no longer overflows narrow screens — the warning banner wraps/clamps to `92vw`, and the speed row (which now actually includes the −1m/s rewind that Phase C added to the model but never rendered) scrolls horizontally instead of pushing the bar off-page.
+- **Touch targets & feel** — enlarged the shell ⓘ buttons, modal close/nav, and search-clear to ≥44px; added `enableDamping` to OrbitControls for smoother touch camera momentum; killed tap-highlight flash, long-press callout, and overscroll bounce globally.
+
 ---
 
 ## 6. Status

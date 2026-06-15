@@ -199,6 +199,8 @@ export function SceneCanvas() {
           maxDistance={200}
           rotateSpeed={0.5}
           zoomSpeed={0.8}
+          enableDamping
+          dampingFactor={0.1}
           makeDefault
         />
       </Canvas>

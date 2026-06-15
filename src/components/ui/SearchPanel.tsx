@@ -121,12 +121,15 @@ export function SearchPanel() {
             onChange={(e) => { setQuery(e.target.value); setCursor(-1); }}
             onKeyDown={handleKey}
             placeholder="Satellite name, NORAD ID, or launch site…"
-            className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm outline-none"
+            // text-base (16px) prevents iOS from auto-zooming on focus
+            className="flex-1 min-w-0 bg-transparent text-white placeholder-slate-500 text-base outline-none"
             autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
             spellCheck={false}
           />
           {query && (
-            <button onClick={() => setQuery("")} className="text-slate-500 hover:text-white transition-colors text-base px-1" aria-label="Clear">
+            <button onClick={() => setQuery("")} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded text-slate-500 hover:text-white transition-colors text-lg" aria-label="Clear search">
               ×
             </button>
           )}

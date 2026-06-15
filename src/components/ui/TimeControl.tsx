@@ -60,10 +60,10 @@ export function TimeControl() {
     >
       {/* TLE validity warning */}
       {beyondTLEValidity && (
-        <div className="flex justify-center mb-1.5">
+        <div className="flex justify-center px-2 mb-1.5">
           <span
             role="status"
-            className="rounded-lg bg-amber-900/70 border border-amber-700/40 px-2.5 py-1 text-[10px] text-amber-300 backdrop-blur-sm"
+            className="max-w-[92vw] text-center leading-snug rounded-lg bg-amber-900/70 border border-amber-700/40 px-2.5 py-1 text-[10px] text-amber-300 backdrop-blur-sm"
           >
             ⚠ {Math.round(offsetDays).toLocaleString()} days from present — satellite positions are extrapolated beyond TLE accuracy
           </span>
@@ -84,25 +84,26 @@ export function TimeControl() {
       </div>
 
       {/* Main control bar */}
-      <div className="flex items-center gap-2 sm:gap-3 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 px-3 sm:px-4 shadow-2xl py-2">
+      <div className="flex items-center gap-2 sm:gap-3 max-w-[96vw] rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 px-3 sm:px-4 shadow-2xl py-2">
         {/* Play/Pause */}
         <button
           onClick={() => setPlaying(!playing)}
-          className="flex h-11 w-11 items-center justify-center rounded-lg text-white hover:text-blue-400 hover:bg-slate-700/50 active:bg-slate-700 transition-colors text-lg"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-white hover:text-blue-400 hover:bg-slate-700/50 active:bg-slate-700 transition-colors text-lg"
           title={playing ? "Pause" : "Play"}
           aria-label={playing ? "Pause" : "Play"}
         >
           {playing ? "⏸" : "▶"}
         </button>
 
-        {/* Speed buttons */}
-        <div className="flex items-center gap-0.5 sm:gap-1">
-          {(TIME_SPEEDS.filter((s) => s > 0) as TimeSpeed[]).map((speed) => (
+        {/* Speed buttons — includes rewind; scrolls horizontally if the row
+            is wider than a narrow phone rather than overflowing the page */}
+        <div className="flex items-center gap-0.5 sm:gap-1 flex-1 min-w-0 overflow-x-auto scrollbar-thin">
+          {(TIME_SPEEDS.filter((s) => s !== 0) as TimeSpeed[]).map((speed) => (
             <button
               key={speed}
               onClick={() => { setTimeSpeed(speed); setPlaying(true); }}
               className={cn(
-                "rounded px-2 py-2.5 text-xs transition-colors font-mono min-h-[44px] min-w-[36px] sm:min-w-[40px]",
+                "rounded px-1.5 sm:px-2 py-2.5 text-xs transition-colors font-mono min-h-[44px] min-w-[34px] sm:min-w-[40px] flex-shrink-0",
                 timeSpeed === speed && playing
                   ? "bg-blue-600 text-white"
                   : "text-slate-400 hover:text-slate-100 hover:bg-slate-700/50 active:bg-slate-700"
@@ -115,13 +116,13 @@ export function TimeControl() {
           ))}
         </div>
 
-        <div className="h-4 w-px bg-slate-700" />
+        <div className="h-4 w-px bg-slate-700 flex-shrink-0" />
 
         {/* Clock */}
-        <span className="font-mono text-xs text-slate-300 select-none tabular-nums hidden sm:block">
+        <span className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 hidden sm:block">
           {dateStr}
         </span>
-        <span className="font-mono text-xs text-slate-300 select-none tabular-nums sm:hidden">
+        <span className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 sm:hidden">
           {dateStr.slice(11)}
         </span>
       </div>

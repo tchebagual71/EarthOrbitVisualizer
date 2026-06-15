@@ -63,7 +63,7 @@ export function LearningCard() {
             </span>
             <button
               onClick={close}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-slate-700/50 transition-colors text-base leading-none -mt-0.5 -mr-1"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-slate-700/50 transition-colors text-xl leading-none -mt-1 -mr-1.5"
               aria-label="Close"
             >
               ×
@@ -123,7 +123,7 @@ export function LearningCard() {
         <div className="flex items-center justify-between px-5 py-3 flex-shrink-0 border-t border-slate-400/10">
           <button
             onClick={prev}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-700/50"
+            className="flex min-h-[44px] items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-700/50"
           >
             ← Prev
           </button>
@@ -147,7 +147,7 @@ export function LearningCard() {
 
           <button
             onClick={next}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-700/50"
+            className="flex min-h-[44px] items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-700/50"
           >
             Next →
           </button>

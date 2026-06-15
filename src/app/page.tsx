@@ -41,7 +41,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden">
+    <main className="relative h-dvh w-screen overflow-hidden touch-manipulation">
       <ErrorBoundary fallback={<SceneCrashFallback />}>
         <Suspense fallback={<LoadingOverlay message="Initializing 3D scene…" />}>
           <SceneCanvas />

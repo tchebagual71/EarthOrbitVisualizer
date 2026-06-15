@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { CategoryFilter } from "./CategoryFilter";
 import { useStore } from "@/hooks/useStore";
 import { useAllTLEData } from "@/hooks/useTLEData";
@@ -33,6 +33,12 @@ export function ControlPanel() {
   const [collapsed, setCollapsed] = useState(false);
   const [sitesOpen, setSitesOpen] = useState(true);
   const [shellsOpen, setShellsOpen] = useState(true);
+
+  // Start collapsed on phones so the globe is unobstructed on first load.
+  // Runs once after mount (no SSR/hydration mismatch).
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 767px)").matches) setCollapsed(true);
+  }, []);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -75,9 +81,11 @@ export function ControlPanel() {
     ? { position: "fixed", left: pos.x, top: pos.y }
     : { marginLeft: "env(safe-area-inset-left, 0px)" };
 
+  // max-height + scroll so a fully-expanded panel never runs past a short
+  // phone screen; overflow-x hidden keeps the rounded corners clean.
   const panelClass = pos
-    ? "z-20 w-56 rounded-xl bg-slate-900/92 backdrop-blur-md border border-slate-700/50 shadow-2xl overflow-hidden"
-    : "absolute left-4 top-1/2 -translate-y-1/2 z-20 w-56 rounded-xl bg-slate-900/92 backdrop-blur-md border border-slate-700/50 shadow-2xl overflow-hidden";
+    ? "z-20 w-56 max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden scrollbar-thin rounded-xl bg-slate-900/92 backdrop-blur-md border border-slate-700/50 shadow-2xl"
+    : "absolute left-4 top-1/2 -translate-y-1/2 z-20 w-56 max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden scrollbar-thin rounded-xl bg-slate-900/92 backdrop-blur-md border border-slate-700/50 shadow-2xl";
 
   return (
     <div ref={panelRef} style={panelStyle} className={panelClass}>
@@ -237,7 +245,7 @@ export function ControlPanel() {
                 <div
                   key={shell.altKm}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-2 min-h-[34px]",
+                    "flex items-center gap-2 rounded-md pl-2 min-h-[44px]",
                     isActive ? "bg-slate-800/70" : "hover:bg-slate-800/30"
                   )}
                 >
@@ -250,7 +258,7 @@ export function ControlPanel() {
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={() => setLearningShell(isActive ? null : idx)}
                     className={cn(
-                      "flex h-5 w-5 items-center justify-center rounded text-[11px] font-bold transition-colors flex-shrink-0",
+                      "flex h-11 w-11 items-center justify-center rounded text-sm font-bold transition-colors flex-shrink-0",
                       isActive
                         ? "text-white"
                         : "text-slate-500 hover:text-slate-200 hover:bg-slate-700/50"

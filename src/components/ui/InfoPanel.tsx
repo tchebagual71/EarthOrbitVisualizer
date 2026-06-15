@@ -49,7 +49,7 @@ export function InfoPanel() {
   const age = derived ? formatAge(derived.ageHours) : null;
 
   return (
-    <div className="info-panel absolute z-20 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 text-sm shadow-2xl">
+    <div className="info-panel scrollbar-thin absolute z-20 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 text-sm shadow-2xl">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 pr-2">

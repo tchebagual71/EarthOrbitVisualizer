@@ -41,6 +41,9 @@ export const viewport: Viewport = {
   themeColor: "#000008",
   width: "device-width",
   initialScale: 1,
+  // Extend layout under notches/rounded corners so env(safe-area-inset-*)
+  // returns real values; without this the safe-area padding is always 0.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
