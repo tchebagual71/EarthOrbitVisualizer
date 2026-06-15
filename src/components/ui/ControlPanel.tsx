@@ -65,15 +65,29 @@ export function ControlPanel() {
   const onPointerUp = useCallback(() => { dragOrigin.current = null; }, []);
 
   if (collapsed) {
+    // Keep search reachable while collapsed — otherwise it's buried behind the
+    // menu on phones, where the panel starts collapsed.
     return (
-      <button
-        onClick={() => setCollapsed(false)}
-        className="absolute z-20 flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/90 backdrop-blur-md border border-slate-700/50 shadow-xl text-white text-lg transition-colors hover:bg-slate-800/90 active:scale-95"
+      <div
+        className="absolute z-20 flex flex-col gap-2"
         style={{ left: "calc(env(safe-area-inset-left, 0px) + 1rem)", top: "50%", transform: "translateY(-50%)" }}
-        aria-label="Open controls"
       >
-        ☰
-      </button>
+        <button
+          onClick={() => setCollapsed(false)}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/90 backdrop-blur-md border border-slate-700/50 shadow-xl text-white text-lg transition-colors hover:bg-slate-800/90 active:scale-95"
+          aria-label="Open controls"
+        >
+          ☰
+        </button>
+        <button
+          onClick={() => setShowSearch(true)}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/90 backdrop-blur-md border border-slate-700/50 shadow-xl text-base transition-colors hover:bg-slate-800/90 active:scale-95"
+          aria-label="Search satellites or launch sites"
+          title="Search  ( / )"
+        >
+          🔍
+        </button>
+      </div>
     );
   }
 

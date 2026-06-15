@@ -6,6 +6,7 @@ import { TimeControl } from "@/components/ui/TimeControl";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { SearchPanel } from "@/components/ui/SearchPanel";
 import { LearningCard } from "@/components/ui/LearningCard";
+import { FirstRunHint } from "@/components/ui/FirstRunHint";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useStore } from "@/hooks/useStore";
 import { Suspense, useEffect } from "react";
@@ -54,6 +55,7 @@ export default function HomePage() {
       <TimeControl />
       <SearchPanel />
       <LearningCard />
+      <FirstRunHint />
     </main>
   );
 }

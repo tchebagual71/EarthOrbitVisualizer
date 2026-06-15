@@ -133,6 +133,11 @@ A focused pass after the deploy fix, prioritising small-screen usability:
 - **TimeControl** no longer overflows narrow screens — the warning banner wraps/clamps to `92vw`, and the speed row (which now actually includes the −1m/s rewind that Phase C added to the model but never rendered) scrolls horizontally instead of pushing the bar off-page.
 - **Touch targets & feel** — enlarged the shell ⓘ buttons, modal close/nav, and search-clear to ≥44px; added `enableDamping` to OrbitControls for smoother touch camera momentum; killed tap-highlight flash, long-press callout, and overscroll bounce globally.
 
+### Phase F — Intuitiveness & delight ✅ DONE
+- **Selection reticle** — `SelectedSatelliteMarker` locks a pulsing halo + wireframe shell to the selected satellite's live position so it's findable among thousands of dots; always shown when a satellite is selected, independent of the trail/orbit/track toggles.
+- **Search reachable on phones** — the collapsed control panel (now the phone default) gained its own search button beside the menu, so search isn't buried one tap deep behind the hamburger.
+- **First-run gesture hint** — a one-time, non-blocking pill ("drag to rotate · scroll or pinch to zoom · tap a satellite to inspect") that auto-dismisses on first interaction or after 8s and never returns (localStorage `eov-hint-seen`).
+
 ---
 
 ## 6. Status

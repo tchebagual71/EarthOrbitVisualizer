@@ -11,6 +11,7 @@ import { SatelliteSelector } from "./SatelliteSelector";
 import { OrbitalPath } from "./OrbitalPath";
 import { GroundTrack } from "./GroundTrack";
 import { SatelliteTrail } from "./SatelliteTrail";
+import { SelectedSatelliteMarker } from "./SelectedSatelliteMarker";
 import { LaunchSites } from "./LaunchSites";
 import { SunLight } from "./SunLight";
 import { useStore } from "@/hooks/useStore";
@@ -187,6 +188,8 @@ export function SceneCanvas() {
           onClearTap={() => setTapPos(null)}
         />
 
+        {/* Selection reticle always shows (independent of overlay toggles) */}
+        {selectedSat && <SelectedSatelliteMarker sat={selectedSat} />}
         {selectedSat && showSatTrail && <SatelliteTrail sat={selectedSat} />}
         {selectedSat && showOrbitPath && <OrbitalPath sat={selectedSat} />}
         {selectedSat && showGroundTrack && <GroundTrack sat={selectedSat} />}
