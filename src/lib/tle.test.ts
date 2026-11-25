@@ -9,6 +9,9 @@ import {
   orbitalPeriodMin,
   orbitalVelocityKms,
   tleToSatelliteRecord,
+  orbitApsides,
+  recordsFromTLETexts,
+  dedupeByNoradId,
 } from "./tle";
 
 // Canonical ISS TLE (epoch 2008-09-20, ~350 km, i=51.64°)
@@ -150,5 +153,52 @@ describe("tleToSatelliteRecord", () => {
     expect(
       tleToSatelliteRecord({ name: "junk", line1: "1 junk", line2: "2 junk" }, "stations", ISS_EPOCH)
     ).toBeNull();
+  });
+});
+
+describe("orbitApsides", () => {
+  it("gives near-equal perigee/apogee for the near-circular ISS orbit", () => {
+    const { perigeeKm, apogeeKm } = orbitApsides(satellite.twoline2satrec(ISS_L1, ISS_L2));
+    expect(perigeeKm).toBeGreaterThan(330);
+    expect(apogeeKm).toBeLessThan(370);
+    expect(apogeeKm - perigeeKm).toBeLessThan(15);
+  });
+
+  it("separates perigee and apogee for a Molniya orbit", () => {
+    const { perigeeKm, apogeeKm } = orbitApsides(fakeSatrec(717.7, 0.74));
+    expect(perigeeKm).toBeLessThan(1000);
+    expect(apogeeKm).toBeGreaterThan(39000);
+  });
+});
+
+describe("recordsFromTLETexts / dedupeByNoradId", () => {
+  // Same orbit under a different catalogue number (cols 3–7 of both lines)
+  const renumber = (line: string, id: string): string =>
+    withChecksum(line.slice(0, 2) + id + line.slice(7, 68));
+  const tle = (name: string, id: string): string =>
+    `${name}\n${renumber(ISS_L1, id)}\n${renumber(ISS_L2, id)}\n`;
+  const group = { id: "other", maxDisplay: 10 } as const;
+
+  it("merges files and keeps the first record per NORAD id", () => {
+    const recs = recordsFromTLETexts(
+      [tle("A", "00001") + tle("B", "00002"), tle("B AGAIN", "00002") + tle("C", "00003")],
+      group,
+      ISS_EPOCH
+    );
+    expect(recs.map((r) => r.name)).toEqual(["A", "B", "C"]);
+    expect(recs.every((r) => r.category === "other")).toBe(true);
+  });
+
+  it("drops excluded names and respects the display cap", () => {
+    const text = tle("STARLINK-1", "00001") + tle("X", "00002") + tle("Y", "00003") + tle("Z", "00004");
+    const recs = recordsFromTLETexts([text], { ...group, maxDisplay: 2, excludeName: /^STARLINK/i }, ISS_EPOCH);
+    expect(recs.map((r) => r.name)).toEqual(["X", "Y"]);
+  });
+
+  it("dedupes across category lists, first list wins", () => {
+    const a = recordsFromTLETexts([tle("ISS", "25544")], { id: "stations", maxDisplay: 10 }, ISS_EPOCH);
+    const b = recordsFromTLETexts([tle("ISS", "25544") + tle("X", "00002")], group, ISS_EPOCH);
+    const merged = dedupeByNoradId([a, b]);
+    expect(merged.map((r) => [r.name, r.category])).toEqual([["ISS", "stations"], ["X", "other"]]);
   });
 });

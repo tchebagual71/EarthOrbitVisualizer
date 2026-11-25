@@ -28,6 +28,12 @@ interface AppState {
   showSatTrail: boolean;
   setShowSatTrail: (v: boolean) => void;
 
+  // Camera reference frame
+  followSat: boolean;          // ride along with the selected satellite
+  setFollowSat: (v: boolean) => void;
+  inertialView: boolean;       // hold the stars still, let the Earth turn
+  setInertialView: (v: boolean) => void;
+
   // Satellite filters
   enabledCategories: Set<OrbitCategory>;
   toggleCategory: (c: OrbitCategory) => void;
@@ -65,6 +71,7 @@ type PersistedPrefs = Pick<
   | "showOrbitPath"
   | "showGroundTrack"
   | "showSatTrail"
+  | "inertialView"
 >;
 
 // JSON can't encode Sets — round-trip them through a tagged array
@@ -93,13 +100,21 @@ export const useStore = create<AppState>()(
   setPlaying: (playing) => set({ playing }),
 
   selectedSat: null,
-  setSelectedSat: (selectedSat) => set({ selectedSat }),
+  // Deselecting also releases the follow camera, so the next selection
+  // doesn't unexpectedly grab the view.
+  setSelectedSat: (selectedSat) =>
+    set(selectedSat ? { selectedSat } : { selectedSat: null, followSat: false }),
   showOrbitPath: true,
   setShowOrbitPath: (showOrbitPath) => set({ showOrbitPath }),
   showGroundTrack: true,
   setShowGroundTrack: (showGroundTrack) => set({ showGroundTrack }),
   showSatTrail: true,
   setShowSatTrail: (showSatTrail) => set({ showSatTrail }),
+
+  followSat: false,
+  setFollowSat: (followSat) => set({ followSat }),
+  inertialView: false,
+  setInertialView: (inertialView) => set({ inertialView }),
 
   enabledCategories: new Set<OrbitCategory>(ORBIT_CATEGORIES),
   toggleCategory: (c) =>
@@ -140,7 +155,16 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "eov-preferences",
-      version: 1,
+      version: 2,
+      // v2 added the "oneweb" and "other" categories — switch them on for
+      // people whose saved set predates them.
+      migrate: (persisted, version) => {
+        const prefs = persisted as PersistedPrefs;
+        if (version < 2 && prefs.enabledCategories instanceof Set) {
+          prefs.enabledCategories.add("oneweb").add("other");
+        }
+        return prefs;
+      },
       storage: prefsStorage,
       partialize: (s): PersistedPrefs => ({
         enabledCategories: s.enabledCategories,
@@ -149,6 +173,7 @@ export const useStore = create<AppState>()(
         showOrbitPath: s.showOrbitPath,
         showGroundTrack: s.showGroundTrack,
         showSatTrail: s.showSatTrail,
+        inertialView: s.inertialView,
       }),
       // Rehydrated manually after mount (see page.tsx) to avoid SSR/client
       // markup mismatches from reading localStorage during initial render.

@@ -60,19 +60,21 @@ EarthOrbitVisualizer/
     ├── components/
     │   ├── scene/
     │   │   ├── SceneCanvas.tsx   ← R3F Canvas, SimClockDriver, CameraJumper, tap-select wiring
+│   │   ├── CameraFrameDriver.tsx ← follow-satellite chase camera + inertial (star-fixed) view
+│   │   ├── Sky.tsx           ← star field, rotated with the inertial frame
     │   │   ├── Earth.tsx         ← textured sphere + clouds + simple atmosphere shell
     │   │   ├── SunLight.tsx      ← directional light driven by solar position
     │   │   ├── OrbitalShells.tsx ← translucent altitude spheres + SHELL_DEFS learning content
     │   │   ├── SatelliteCloud.tsx← instanced mesh; Web Worker SGP4 (main-thread fallback)
-    │   │   ├── SatelliteSelector.tsx ← screen-space nearest-satellite tap picking
-    │   │   ├── OrbitalPath.tsx   ← selected sat's orbit line (recomputes per sim-minute)
+    │   │   ├── SatelliteSelector.tsx ← screen-space nearest-satellite tap picking (Earth-occluded sats skipped; empty tap deselects)
+    │   │   ├── OrbitalPath.tsx   ← selected sat's closed inertial orbit (recomputes per sim-minute, rotated per frame)
     │   │   ├── GroundTrack.tsx   ← surface-projected track (recomputes per sim-minute)
     │   │   ├── SatelliteTrail.tsx← 30-min fading history (recomputes per 20 sim-sec)
     │   │   └── LaunchSites.tsx   ← site markers, hover/click tooltips, zoom-gated labels
     │   └── ui/
     │       ├── ControlPanel.tsx  ← draggable left panel: categories, sites, shells
     │       ├── CategoryFilter.tsx
-    │       ├── InfoPanel.tsx     ← selected satellite details + TLE age warning
+    │       ├── InfoPanel.tsx     ← selected satellite live state (alt/speed/sub-point), apsides, TLE age warning
     │       ├── TimeControl.tsx   ← play/pause, speeds, presets, clock
     │       ├── SearchPanel.tsx   ← '/' fuzzy search over satellites + launch sites
     │       ├── LearningCard.tsx  ← orbital shell education modal
@@ -153,9 +155,11 @@ https://celestrak.org/NORAD/elements/gp.php?GROUP=<group>&FORMAT=TLE          //
 https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle  // starlink
 ```
 
-`CELESTRAK_GROUPS` in `categories.ts` is the **single source of truth**: `OrbitCategory` is derived from it (`(typeof CELESTRAK_GROUPS)[number]["id"]`), as is the default enabled set (`ORBIT_CATEGORIES`). Adding a category there turns every other required change into a compile error (the `useAllTLEData` hooks are exhaustiveness-checked against the union). Current categories: stations, starlink (max 2000), gps, weather, geo, amateur, debris (cosmos-2251). Each entry defines `url`, `color`, `label`, `maxDisplay`.
+This sandbox's network policy may block `celestrak.org`; if so, test with mocked `/api/satellites` responses.
 
-The edge API route at `/api/satellites?category=<id>` fetches server-side (avoids CORS), parses TLEs into `SatelliteRecord`s, and sets `Cache-Control: s-maxage=3600, stale-while-revalidate=7200` for the CDN. It also keeps a module-level cache (spares CelesTrak on dev-server reloads / warm edge isolates, and serves stale data when upstream is down). Client-side, SWR dedupes for 1 hour and disabled categories use a null key (not fetched).
+`CELESTRAK_GROUPS` in `categories.ts` is the **single source of truth**: `OrbitCategory` is derived from it (`(typeof CELESTRAK_GROUPS)[number]["id"]`), as is the default enabled set (`ORBIT_CATEGORIES`). Adding a category there turns every other required change into a compile error (the `useAllTLEData` hooks are exhaustiveness-checked against the union). Current categories (in priority order): stations, starlink (full constellation), oneweb, gps (all GNSS), weather, geo, amateur, other (CelesTrak `active` minus the mega-constellations), debris (four largest fragmentation events, merged). Each entry defines `urls` (one category may merge several CelesTrak files), `color`, `label`, `maxDisplay` (a safety cap, not a sample size) and optionally `excludeName`. An object listed in several groups is kept once — the route de-duplicates within a category (`recordsFromTLETexts`), `useAllTLEData` across categories (`dedupeByNoradId`, earlier category wins). Expect roughly 20–25k objects with everything enabled.
+
+The edge API route at `/api/satellites?category=<id>` fetches server-side (avoids CORS; a category fails only if *all* of its files fail), parses TLEs into `SatelliteRecord`s, and sets `Cache-Control: s-maxage=3600, stale-while-revalidate=7200` for the CDN. It also keeps a module-level cache (spares CelesTrak on dev-server reloads / warm edge isolates, and serves stale data when upstream is down). Client-side, SWR dedupes for 1 hour and disabled categories use a null key (not fetched).
 
 ---
 
@@ -196,7 +200,7 @@ CI (`.github/workflows/ci.yml`) runs type-check → lint → test → build on P
 | FPS (mobile) | 30 fps with 1000 satellites |
 | Initial load | < 3 s on 4G |
 
-- **Instanced mesh** for satellites (single draw call). SGP4 runs in a **Web Worker** (`src/workers/propagator.worker.ts`); position/valid buffers ping-pong via transfer (zero-copy). Each frame draws the latest completed batch and requests the next at the current sim time if the worker is idle — positions lag the clock by ≤1 frame. Falls back to main-thread `propagateBatch` if `Worker` is unavailable.
+- **Instanced mesh** for satellites (single draw call, 20-triangle icosahedra, matrices written straight into the instance buffer, frustum culling off). SGP4 runs in a **Web Worker** (`src/workers/propagator.worker.ts`); position/valid buffers ping-pong via transfer (zero-copy). Each frame draws the latest completed batch and requests the next at the current sim time if the worker is idle — positions lag the clock by ≤1 frame. Falls back to main-thread `propagateBatch` if `Worker` is unavailable.
 - Selected-satellite overlays recompute on coarse sim-time slices, not per frame (orbit/track: 1 min; trail: 20 s)
 - Satellite list identity is stable (memoized in `useAllTLEData`); changing it bumps a generation guard so stale worker responses are dropped
 - Dynamic import with `ssr: false` for the canvas
@@ -210,6 +214,11 @@ CI (`.github/workflows/ci.yml`) runs type-check → lint → test → build on P
 - **`satellite.propagate()` returns no/boolean position for decayed satellites** — always check before rendering (`propagateAt` returns `null`). `twoline2satrec` does **not** throw on malformed lines; it yields NaN propagation — `tleToSatelliteRecord` rejects non-finite results.
 - **Earth textures:** NASA Blue Marble (public domain). Night lights are gated to the dark side via an `onBeforeCompile` Phong patch in `Earth.tsx` (uniform `uSunDirView`, view space, updated per frame).
 - **User prefs persist** to localStorage (`eov-preferences`) via Zustand `persist` with `skipHydration` — rehydrated after mount in `page.tsx`. Sets serialize through a tagged-array replacer/reviver.
+- **Orbit line vs. ground track:** the scene is Earth-fixed, so `getOrbitPath` returns the inertial ellipse at one sidereal angle and `OrbitalPath` rotates it by `orbitFrameRotationY` each frame. Don't convert each point at its own time — that draws an Earth-relative spiral (and collapses GEO to a dot); that view is the ground track's job.
+- **`SatelliteRecord.altitude` is a fetch-time snapshot** — fine for search results, never for display of current state; use `getLiveState`.
+- **`vercel.json`** pins the Next.js framework preset; the deploy broke without it — keep it.
+- **Camera frames:** the scene stays Earth-fixed; `CameraFrameDriver` moves the *camera* instead. Follow mode pivots OrbitControls on the satellite, rotates the camera offset with the satellite's motion and sets `camera.up` to the local vertical (drei's three-stdlib OrbitControls re-reads `up` every update). Inertial view rotates the camera about Y by the per-frame change in `inertialFrameRotationY`. It runs after OrbitControls (priority −1) and only nudges `camera.position`/`controls.target`, so user input keeps working. Deselecting releases follow.
+- **Marker size** is scaled in the vertex shader by camera distance (clamped), so dots stay dot-sized up close and visible at GEO range.
 - **No WebGPU:** stick with WebGL2.
 - **PWA / service worker:** Serwist generates `public/sw.js` from `src/app/sw.ts` at build time (disabled in dev so it doesn't mask hot reloads). Textures are cached cache-first; TLE responses network-first with a 7-day offline fallback. The generated `sw.js`/`sw.js.map` are gitignored.
 
@@ -223,3 +232,6 @@ Tracked in `IMPROVEMENT_PLAN.md` — all phases complete:
 - [x] Phase B — Vitest suite, CI workflow, documentation rewrite
 - [x] Phase C — day/night shader, error boundaries, TLE-validity warnings, persisted prefs, a11y
 - [x] Phase D — Web Worker propagation, service worker/PWA, category-config consolidation
+- [x] Phases E–F — mobile pass, selection reticle, first-run hint
+- [x] Phase G — occlusion-aware picking, inertial orbit line, live info panel, full catalogue
+- [x] Phase H — follow camera, inertial view, rotating star field, distance-scaled markers

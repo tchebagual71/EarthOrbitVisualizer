@@ -1,4 +1,4 @@
-import type { TLERecord, SatelliteRecord, OrbitCategory } from "@/types/satellite";
+import type { CelestrakGroup, TLERecord, SatelliteRecord, OrbitCategory } from "@/types/satellite";
 import * as satellite from "satellite.js";
 import { EARTH_RADIUS_KM, ORBIT_BOUNDARIES } from "./constants";
 
@@ -56,6 +56,44 @@ export function tleToSatelliteRecord(
   }
 }
 
+// Turn the raw TLE text of one or more CelesTrak files into the records for
+// a category: drops names the group excludes, de-duplicates by NORAD id
+// (first occurrence wins) and stops at the group's display cap.
+export function recordsFromTLETexts(
+  texts: string[],
+  group: Pick<CelestrakGroup, "id" | "maxDisplay" | "excludeName">,
+  at: Date = new Date()
+): SatelliteRecord[] {
+  const seen = new Set<number>();
+  const records: SatelliteRecord[] = [];
+  for (const text of texts) {
+    for (const tle of parseTLEText(text)) {
+      if (records.length >= group.maxDisplay) return records;
+      if (group.excludeName?.test(tle.name)) continue;
+      const rec = tleToSatelliteRecord(tle, group.id, at);
+      if (!rec || seen.has(rec.noradId)) continue;
+      seen.add(rec.noradId);
+      records.push(rec);
+    }
+  }
+  return records;
+}
+
+// Merge per-category lists into one, keeping the first record for each NORAD
+// id — objects listed in several CelesTrak groups are drawn (and picked) once.
+export function dedupeByNoradId(lists: SatelliteRecord[][]): SatelliteRecord[] {
+  const seen = new Set<number>();
+  const out: SatelliteRecord[] = [];
+  for (const list of lists) {
+    for (const rec of list) {
+      if (seen.has(rec.noradId)) continue;
+      seen.add(rec.noradId);
+      out.push(rec);
+    }
+  }
+  return out;
+}
+
 const GEO_TOLERANCE_KM = 500;
 
 export function classifyAltitude(altitudeKm: number): string {
@@ -70,10 +108,23 @@ export function classifyAltitude(altitudeKm: number): string {
 // Orbit class from mean elements. More robust than an instantaneous-altitude
 // snapshot, which mislabels eccentric orbits (a Molniya sat near perigee
 // would read as LEO).
-export function classifyOrbit(satrec: satellite.SatRec): string {
+function semiMajorAxisKm(satrec: satellite.SatRec): number {
   const nRadSec = satrec.no / 60; // satrec.no is rad/min
-  const semiMajorKm = Math.cbrt(GM / (nRadSec * nRadSec));
-  const meanAltKm = semiMajorKm - EARTH_RADIUS_KM;
+  return Math.cbrt(GM / (nRadSec * nRadSec));
+}
+
+// Perigee and apogee altitudes (km above the mean-radius sphere) from mean
+// elements.
+export function orbitApsides(satrec: satellite.SatRec): { perigeeKm: number; apogeeKm: number } {
+  const a = semiMajorAxisKm(satrec);
+  return {
+    perigeeKm: a * (1 - satrec.ecco) - EARTH_RADIUS_KM,
+    apogeeKm: a * (1 + satrec.ecco) - EARTH_RADIUS_KM,
+  };
+}
+
+export function classifyOrbit(satrec: satellite.SatRec): string {
+  const meanAltKm = semiMajorAxisKm(satrec) - EARTH_RADIUS_KM;
   if (satrec.ecco > 0.25) return "HEO";
   if (Math.abs(meanAltKm - ORBIT_BOUNDARIES.GEO) < GEO_TOLERANCE_KM) return "GEO";
   if (meanAltKm < ORBIT_BOUNDARIES.LEO_MAX) return "LEO";

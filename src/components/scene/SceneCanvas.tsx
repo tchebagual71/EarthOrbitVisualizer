@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { OrbitControls, Stars } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import * as satellite from "satellite.js";
 import { Earth } from "./Earth";
@@ -14,6 +14,8 @@ import { SatelliteTrail } from "./SatelliteTrail";
 import { SelectedSatelliteMarker } from "./SelectedSatelliteMarker";
 import { LaunchSites } from "./LaunchSites";
 import { SunLight } from "./SunLight";
+import { Sky } from "./Sky";
+import { CameraFrameDriver } from "./CameraFrameDriver";
 import { useStore } from "@/hooks/useStore";
 import { useAllTLEData } from "@/hooks/useTLEData";
 import { propagateAt } from "@/lib/coordinates";
@@ -75,7 +77,13 @@ function CameraJumper() {
     try {
       const satrec = satellite.twoline2satrec(jumpTarget.line1, jumpTarget.line2);
       const pos = propagateAt(satrec, getSimTime());
-      if (pos) startJump(pos, Math.max(camera.position.length() * 0.5, 20));
+      if (pos) {
+        // End outside the satellite's own radius, otherwise a high orbit
+        // (MEO/GEO) leaves the camera between the Earth and the satellite
+        // with the target behind it.
+        const satDist = Math.hypot(pos.x, pos.y, pos.z);
+        startJump(pos, Math.min(Math.max(camera.position.length() * 0.5, satDist * 1.8, 20), 200));
+      }
     } catch { /* ignore */ }
     setJumpTarget(null);
   }, [jumpTarget, camera, setJumpTarget, startJump]);
@@ -83,12 +91,20 @@ function CameraJumper() {
   // Jump to a fixed scene position (e.g. launch site on Earth surface)
   useEffect(() => {
     if (!jumpPosition) return;
+    // A launch site is on the ground — stop riding along with a satellite
+    useStore.getState().setFollowSat(false);
     startJump(jumpPosition, 9); // zoom in close to Earth surface
     setJumpPosition(null);
   }, [jumpPosition, setJumpPosition, startJump]);
 
   useFrame(() => {
     if (!jumping.current) return;
+    // While following, CameraFrameDriver owns the camera
+    const { followSat, selectedSat } = useStore.getState();
+    if (followSat && selectedSat) {
+      jumping.current = false;
+      return;
+    }
     progress.current = Math.min(progress.current + 0.035, 1);
     const t = 1 - Math.pow(1 - progress.current, 3); // cubic ease-out
     camera.position.lerpVectors(startPos.current, endPos.current, t);
@@ -109,6 +125,7 @@ export function SceneCanvas() {
   const showLaunchSites = useStore((s) => s.showLaunchSites);
   const showSearch = useStore((s) => s.showSearch);
   const setShowSearch = useStore((s) => s.setShowSearch);
+  const following = useStore((s) => s.followSat && s.selectedSat !== null);
 
   const positionsRef = useRef(new Float32Array(0));
   const posValidRef  = useRef(new Uint8Array(0));
@@ -131,7 +148,7 @@ export function SceneCanvas() {
   const { satellites } = useAllTLEData(enabledCategories);
 
   const handleSelect = useCallback(
-    (sat: SatelliteRecord) => setSelectedSat(sat),
+    (sat: SatelliteRecord | null) => setSelectedSat(sat),
     [setSelectedSat]
   );
 
@@ -157,7 +174,7 @@ export function SceneCanvas() {
         <SimClockDriver />
         <ambientLight intensity={0.1} />
         <SunLight />
-        <Stars radius={300} depth={60} count={6000} factor={5} saturation={0} fade />
+        <Sky />
 
         <Suspense fallback={null}>
           <Earth />
@@ -195,10 +212,12 @@ export function SceneCanvas() {
         {selectedSat && showGroundTrack && <GroundTrack sat={selectedSat} />}
 
         <CameraJumper />
+        <CameraFrameDriver />
 
         <OrbitControls
           enablePan={false}
-          minDistance={7}
+          // Pivot is the Earth's center normally, the satellite when following
+          minDistance={following ? 0.4 : 7}
           maxDistance={200}
           rotateSpeed={0.5}
           zoomSpeed={0.8}

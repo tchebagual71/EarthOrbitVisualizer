@@ -41,6 +41,8 @@ export function TimeControl() {
   const setPlaying = useStore((s) => s.setPlaying);
   const setTimeSpeed = useStore((s) => s.setTimeSpeed);
   const setSimTime = useStore((s) => s.setSimTime);
+  const inertialView = useStore((s) => s.inertialView);
+  const setInertialView = useStore((s) => s.setInertialView);
 
   const dateStr = simTime.toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
@@ -81,6 +83,24 @@ export function TimeControl() {
             {label}
           </button>
         ))}
+        {/* Camera reference frame */}
+        <button
+          onClick={() => setInertialView(!inertialView)}
+          aria-pressed={inertialView}
+          title={
+            inertialView
+              ? "Inertial view: the stars hold still and the Earth turns. Click for Earth-fixed."
+              : "Earth-fixed view: the camera turns with the Earth. Click to hold the stars still instead."
+          }
+          className={cn(
+            "ml-1.5 rounded-lg px-2.5 py-1 text-xs font-mono backdrop-blur-sm border active:scale-95 transition-all",
+            inertialView
+              ? "text-white bg-blue-600/80 border-blue-400/40"
+              : "text-slate-400 bg-slate-900/80 border-slate-700/40 hover:text-slate-100 hover:bg-slate-800/80"
+          )}
+        >
+          {inertialView ? "✓ Inertial" : "Inertial"}
+        </button>
       </div>
 
       {/* Main control bar */}
@@ -118,11 +138,12 @@ export function TimeControl() {
 
         <div className="h-4 w-px bg-slate-700 flex-shrink-0" />
 
-        {/* Clock */}
-        <span className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 hidden sm:block">
+        {/* Clock — the prerendered HTML carries the build-time clock, so the
+            text legitimately differs on hydration */}
+        <span suppressHydrationWarning className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 hidden sm:block">
           {dateStr}
         </span>
-        <span className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 sm:hidden">
+        <span suppressHydrationWarning className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 sm:hidden">
           {dateStr.slice(11)}
         </span>
       </div>

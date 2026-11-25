@@ -32,8 +32,8 @@ function CategoryRow({ group }: { group: (typeof CELESTRAK_GROUPS)[number] }) {
         />
         <span className="flex-1">{group.label}</span>
         {enabled && !error && (
-          <span className="text-[10px] tabular-nums text-slate-500 ml-auto">
-            {isLoading ? "…" : satellites.length}
+          <span className="text-[10px] tabular-nums text-slate-500 ml-auto flex-shrink-0">
+            {isLoading ? "…" : satellites.length.toLocaleString()}
           </span>
         )}
       </button>
