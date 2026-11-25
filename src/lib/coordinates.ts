@@ -105,11 +105,64 @@ export function getOrbitPath(
   return points;
 }
 
+// Orientation of the inertial frame within the Earth-fixed scene at `date`,
+// as a rotation about the scene Y axis (radians). The Earth turns east, so
+// inertial things (stars, orbit planes) drift west.
+export function inertialFrameRotationY(date: Date): number {
+  return -satellite.gstime(date);
+}
+
 // Rotation about the scene Y axis (radians) that carries inertial geometry
 // expressed in the Earth-fixed frame of `computedAt` into the Earth-fixed
-// frame of `now`. The Earth turns east, so inertial things drift west.
+// frame of `now`.
 export function orbitFrameRotationY(computedAt: Date, now: Date): number {
-  return -(satellite.gstime(now) - satellite.gstime(computedAt));
+  return inertialFrameRotationY(now) - inertialFrameRotationY(computedAt);
+}
+
+// Camera position for a "chase" view of a satellite: above it (away from
+// the Earth), behind its direction of travel and a little out of the orbital
+// plane, so both the Earth below and the orbit ahead are in view. `ahead` is
+// the satellite's position a short time later. Stand-off scales with orbit
+// size: ~2,500 km for LEO up to ~14,000 km for GEO.
+export function chaseCameraPosition(pos: ScenePosition, ahead: ScenePosition): ScenePosition {
+  const r = Math.hypot(pos.x, pos.y, pos.z) || 1;
+  const up = { x: pos.x / r, y: pos.y / r, z: pos.z / r };
+  // Direction of travel, with the radial component removed
+  let fx = ahead.x - pos.x;
+  let fy = ahead.y - pos.y;
+  let fz = ahead.z - pos.z;
+  const radial = fx * up.x + fy * up.y + fz * up.z;
+  fx -= radial * up.x;
+  fy -= radial * up.y;
+  fz -= radial * up.z;
+  let fLen = Math.hypot(fx, fy, fz);
+  if (fLen < 1e-9) {
+    // No usable motion (e.g. geostationary in the Earth-fixed frame): use east
+    fx = up.z;
+    fy = 0;
+    fz = -up.x;
+    fLen = Math.hypot(fx, fy, fz) || 1;
+  }
+  fx /= fLen;
+  fy /= fLen;
+  fz /= fLen;
+  // side = up × forward
+  const sx = up.y * fz - up.z * fy;
+  const sy = up.z * fx - up.x * fz;
+  const sz = up.x * fy - up.y * fx;
+  const d = Math.min(14, Math.max(2.5, r * 0.35));
+  // Low orbits get a shallow over-the-shoulder view (the Earth fills the
+  // frame anyway); high orbits look more steeply down so the now-small Earth
+  // stays in shot.
+  const k = Math.min(1, Math.max(0, (r - 8) / 30));
+  const u = 0.6 + 0.35 * k;
+  const b = 0.7 - 0.45 * k;
+  const w = 0.4 - 0.25 * k;
+  return {
+    x: pos.x + d * (u * up.x - b * fx + w * sx),
+    y: pos.y + d * (u * up.y - b * fy + w * sy),
+    z: pos.z + d * (u * up.z - b * fz + w * sz),
+  };
 }
 
 // True when the Earth blocks the straight line from `eye` to `point`

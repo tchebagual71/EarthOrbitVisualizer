@@ -60,6 +60,8 @@ EarthOrbitVisualizer/
     ├── components/
     │   ├── scene/
     │   │   ├── SceneCanvas.tsx   ← R3F Canvas, SimClockDriver, CameraJumper, tap-select wiring
+│   │   ├── CameraFrameDriver.tsx ← follow-satellite chase camera + inertial (star-fixed) view
+│   │   ├── Sky.tsx           ← star field, rotated with the inertial frame
     │   │   ├── Earth.tsx         ← textured sphere + clouds + simple atmosphere shell
     │   │   ├── SunLight.tsx      ← directional light driven by solar position
     │   │   ├── OrbitalShells.tsx ← translucent altitude spheres + SHELL_DEFS learning content
@@ -215,6 +217,8 @@ CI (`.github/workflows/ci.yml`) runs type-check → lint → test → build on P
 - **Orbit line vs. ground track:** the scene is Earth-fixed, so `getOrbitPath` returns the inertial ellipse at one sidereal angle and `OrbitalPath` rotates it by `orbitFrameRotationY` each frame. Don't convert each point at its own time — that draws an Earth-relative spiral (and collapses GEO to a dot); that view is the ground track's job.
 - **`SatelliteRecord.altitude` is a fetch-time snapshot** — fine for search results, never for display of current state; use `getLiveState`.
 - **`vercel.json`** pins the Next.js framework preset; the deploy broke without it — keep it.
+- **Camera frames:** the scene stays Earth-fixed; `CameraFrameDriver` moves the *camera* instead. Follow mode pivots OrbitControls on the satellite, rotates the camera offset with the satellite's motion and sets `camera.up` to the local vertical (drei's three-stdlib OrbitControls re-reads `up` every update). Inertial view rotates the camera about Y by the per-frame change in `inertialFrameRotationY`. It runs after OrbitControls (priority −1) and only nudges `camera.position`/`controls.target`, so user input keeps working. Deselecting releases follow.
+- **Marker size** is scaled in the vertex shader by camera distance (clamped), so dots stay dot-sized up close and visible at GEO range.
 - **No WebGPU:** stick with WebGL2.
 - **PWA / service worker:** Serwist generates `public/sw.js` from `src/app/sw.ts` at build time (disabled in dev so it doesn't mask hot reloads). Textures are cached cache-first; TLE responses network-first with a 7-day offline fallback. The generated `sw.js`/`sw.js.map` are gitignored.
 
@@ -230,3 +234,4 @@ Tracked in `IMPROVEMENT_PLAN.md` — all phases complete:
 - [x] Phase D — Web Worker propagation, service worker/PWA, category-config consolidation
 - [x] Phases E–F — mobile pass, selection reticle, first-run hint
 - [x] Phase G — occlusion-aware picking, inertial orbit line, live info panel, full catalogue
+- [x] Phase H — follow camera, inertial view, rotating star field, distance-scaled markers

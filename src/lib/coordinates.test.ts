@@ -10,6 +10,7 @@ import {
   orbitFrameRotationY,
   isOccludedByEarth,
   getLiveState,
+  chaseCameraPosition,
 } from "./coordinates";
 import { EARTH_RADIUS_SCENE } from "./constants";
 
@@ -218,5 +219,39 @@ describe("getLiveState", () => {
 
   it("returns null when propagation fails", () => {
     expect(getLiveState(satellite.twoline2satrec("garbage", "garbage"), ISS_EPOCH)).toBeNull();
+  });
+});
+
+describe("chaseCameraPosition", () => {
+  const satrec = satellite.twoline2satrec(ISS_L1, ISS_L2);
+  const pos = propagateAt(satrec, ISS_EPOCH)!;
+  const ahead = propagateAt(satrec, new Date(ISS_EPOCH.getTime() + 10_000))!;
+  const cam = chaseCameraPosition(pos, ahead);
+  const sub = (a: typeof pos, b: typeof pos) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
+  const dot = (a: typeof pos, b: typeof pos) => a.x * b.x + a.y * b.y + a.z * b.z;
+
+  it("sits above and behind the satellite with a clear line of sight", () => {
+    const offset = sub(cam, pos);
+    expect(len(cam)).toBeGreaterThan(len(pos)); // above
+    expect(dot(offset, sub(ahead, pos))).toBeLessThan(0); // behind
+    expect(len(offset)).toBeGreaterThan(1);
+    expect(isOccludedByEarth(cam, pos)).toBe(false);
+  });
+
+  it("is out of the orbital plane, so the orbit isn't seen edge-on", () => {
+    const f = sub(ahead, pos);
+    const normal = {
+      x: pos.y * f.z - pos.z * f.y,
+      y: pos.z * f.x - pos.x * f.z,
+      z: pos.x * f.y - pos.y * f.x,
+    };
+    expect(Math.abs(dot(sub(cam, pos), normal)) / len(normal)).toBeGreaterThan(0.5);
+  });
+
+  it("still returns a finite stand-off for a satellite that isn't moving", () => {
+    const geo = { x: 42.164, y: 0, z: 0 };
+    const c = chaseCameraPosition(geo, geo);
+    expect(Number.isFinite(c.x + c.y + c.z)).toBe(true);
+    expect(len(sub(c, geo))).toBeGreaterThan(5);
   });
 });

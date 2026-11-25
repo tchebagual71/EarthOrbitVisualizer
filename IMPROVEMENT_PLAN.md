@@ -148,6 +148,14 @@ What the app shows, rather than how it is built:
 
 Verified in headless Chromium against a production build with a synthetic 19k-object catalogue (CelesTrak was unreachable from the sandbox): near-side-only picking, deselect, live values ticking, closed LEO/GEO/Molniya orbit lines, cross-category de-duplication. **Not verified:** the new CelesTrak group names against the live API, and frame rate on real GPU hardware.
 
+### Phase H — Camera reference frames ✅ DONE
+- **Follow camera** — "Follow with camera" in the info panel flies to a chase view (above, behind and slightly out of plane; steeper for high orbits so the Earth stays in shot) and then rides along with the satellite, horizon-locked. Drag and zoom keep working, pivoting on the satellite. Selecting another satellite retargets; deselecting or jumping to a launch site releases.
+- **Inertial view** — a toggle beside the time presets holds the stars (and orbit planes) still while the Earth turns underneath. Persisted with the other preferences.
+- **Star field rotates with the inertial frame** — it used to be bolted to the Earth while the sun moved.
+- **Distance-scaled markers** — the 40 km marker spheres became boulders in the chase view; they now keep roughly their default on-screen size.
+
+Verified in headless Chromium (same synthetic catalogue): the followed satellite stays centred while time runs at 1 min/s for LEO and GEO targets, release returns the pivot to the Earth, and in inertial view at 1 h/s the Earth rotates under a fixed sky.
+
 ---
 
 ## 6. Status

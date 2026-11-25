@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import * as satellite from "satellite.js";
@@ -17,6 +17,9 @@ interface Props {
   positionsRef: React.MutableRefObject<Float32Array>;
   posValidRef: React.MutableRefObject<Uint8Array>;
 }
+
+// Camera distance (scene units) at which a marker is drawn at SAT_MARKER_SIZE
+const MARKER_REFERENCE_DISTANCE = 18;
 
 const makeBuffers = (count: number) => ({
   positions: new ArrayBuffer(count * 3 * 4),
@@ -102,6 +105,22 @@ export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props)
     return arr;
   }, [satellites]);
 
+  // Markers are far larger than any real satellite, so a fixed world size
+  // turns them into boulders when the camera is close (follow mode) and
+  // loses them when it is far (GEO). Scale each one by its distance from the
+  // camera so it keeps roughly the size it has in the default view, within
+  // limits that still give a sense of depth.
+  const onBeforeCompile = useCallback((shader: THREE.WebGLProgramParametersWithUniforms) => {
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        float eovDist = -(modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).z;
+        transformed *= clamp(eovDist / ${MARKER_REFERENCE_DISTANCE.toFixed(1)}, 0.1, 6.0);
+      #endif`
+    );
+  }, []);
+
   useFrame(() => {
     const mesh = meshRef.current;
     if (!mesh || !satellites.length) return;
@@ -169,7 +188,7 @@ export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props)
     >
       {/* 20 triangles per dot: the catalogue runs to tens of thousands */}
       <icosahedronGeometry args={[SAT_MARKER_SIZE, 0]} />
-      <meshBasicMaterial vertexColors />
+      <meshBasicMaterial vertexColors onBeforeCompile={onBeforeCompile} />
       <instancedBufferAttribute
         attach="geometry-attributes-color"
         args={[colors, 3]}

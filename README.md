@@ -5,6 +5,7 @@ An interactive, to-scale 3D visualization of objects in Earth orbit, running in 
 ## Features
 
 - **Real satellite tracking** — Space stations, the full Starlink and OneWeb constellations, GNSS, weather, GEO belt, amateur, other active satellites, and debris (~20k objects), propagated with SGP4 (`satellite.js`) and rendered to scale (1 scene unit = 1,000 km)
+- **Follow camera & inertial view** — ride along with any satellite, or hold the stars still and watch the Earth turn beneath the orbits
 - **Time control** — play/pause, speeds from 1× to 1 hour/second, and jump-to presets
 - **Satellite inspector** — tap any satellite for altitude, inclination, period, velocity, orbit class, and TLE freshness, plus its orbital path, 30-minute trail, and surface ground track
 - **Launch site atlas** — 36 sites worldwide, color-coded by type, with zoom-in labels and detail cards

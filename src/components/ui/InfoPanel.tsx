@@ -35,6 +35,8 @@ export function InfoPanel() {
   const setShowGroundTrack = useStore((s) => s.setShowGroundTrack);
   const showSatTrail = useStore((s) => s.showSatTrail);
   const setShowSatTrail = useStore((s) => s.setShowSatTrail);
+  const followSat = useStore((s) => s.followSat);
+  const setFollowSat = useStore((s) => s.setFollowSat);
   const simTime = useStore((s) => s.simTime);
 
   // Parsed once per selection; mean-element quantities don't change with time
@@ -131,8 +133,18 @@ export function InfoPanel() {
         {age.warn && <span className="text-amber-400 font-semibold">· accuracy reduced</span>}
       </div>
 
+      {/* Follow camera */}
+      <button
+        onClick={() => setFollowSat(!followSat)}
+        aria-pressed={followSat}
+        className={`mt-3 w-full rounded-md py-2 text-xs transition-colors min-h-[40px] ${followSat ? "bg-emerald-600/70 hover:bg-emerald-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-300"}`}
+        title="Ride along with this satellite; drag and zoom still work"
+      >
+        {followSat ? "✓ Following — tap to release" : "Follow with camera"}
+      </button>
+
       {/* Toggles */}
-      <div className="mt-3 grid grid-cols-3 gap-1.5">
+      <div className="mt-1.5 grid grid-cols-3 gap-1.5">
         <button
           onClick={() => setShowSatTrail(!showSatTrail)}
           className={`rounded-md py-2 text-xs transition-colors min-h-[40px] ${showSatTrail ? "bg-purple-600/70 hover:bg-purple-500/70 text-white" : "bg-slate-700/60 hover:bg-slate-600/60 text-slate-400"}`}
