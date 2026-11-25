@@ -140,7 +140,16 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "eov-preferences",
-      version: 1,
+      version: 2,
+      // v2 added the "oneweb" and "other" categories — switch them on for
+      // people whose saved set predates them.
+      migrate: (persisted, version) => {
+        const prefs = persisted as PersistedPrefs;
+        if (version < 2 && prefs.enabledCategories instanceof Set) {
+          prefs.enabledCategories.add("oneweb").add("other");
+        }
+        return prefs;
+      },
       storage: prefsStorage,
       partialize: (s): PersistedPrefs => ({
         enabledCategories: s.enabledCategories,

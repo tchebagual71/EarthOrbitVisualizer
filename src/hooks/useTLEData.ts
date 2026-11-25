@@ -2,6 +2,8 @@
 import { useMemo } from "react";
 import useSWR from "swr";
 import type { SatelliteRecord, OrbitCategory } from "@/types/satellite";
+import { ORBIT_CATEGORIES } from "@/lib/categories";
+import { dedupeByNoradId } from "@/lib/tle";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -43,28 +45,32 @@ export function useTLEData(category: OrbitCategory, enabled = true): TLEDataResu
   );
 }
 
-// Always calls all 7 hooks (fixed count) — disabled categories use a null SWR
+// Always calls every category hook (fixed count) — disabled categories use a null SWR
 // key so they aren't fetched. The merged result is memoized: consumers receive
 // a stable array identity unless the underlying data or enabled set changes.
+// Objects listed under several categories are kept once, under whichever
+// enabled category comes first in CELESTRAK_GROUPS.
 export function useAllTLEData(enabled: Set<OrbitCategory>): TLEDataResult {
   const stations = useTLEData("stations", enabled.has("stations"));
   const starlink = useTLEData("starlink", enabled.has("starlink"));
+  const oneweb   = useTLEData("oneweb",   enabled.has("oneweb"));
   const gps      = useTLEData("gps",      enabled.has("gps"));
   const weather  = useTLEData("weather",  enabled.has("weather"));
   const geo      = useTLEData("geo",      enabled.has("geo"));
   const amateur  = useTLEData("amateur",  enabled.has("amateur"));
+  const other    = useTLEData("other",    enabled.has("other"));
   const debris   = useTLEData("debris",   enabled.has("debris"));
 
   return useMemo(() => {
     const all: Record<OrbitCategory, TLEDataResult> = {
-      stations, starlink, gps, weather, geo, amateur, debris,
+      stations, starlink, oneweb, gps, weather, geo, amateur, other, debris,
     };
-    const active = (Object.keys(all) as OrbitCategory[]).filter((c) => enabled.has(c));
+    const active = ORBIT_CATEGORIES.filter((c) => enabled.has(c));
     return {
-      satellites: active.flatMap((c) => all[c].satellites),
+      satellites: dedupeByNoradId(active.map((c) => all[c].satellites)),
       isLoading:  active.some((c) => all[c].isLoading),
       error:      active.map((c) => all[c].error).find(Boolean) ?? null,
       retry:      () => active.forEach((c) => { if (all[c].error) all[c].retry(); }),
     };
-  }, [stations, starlink, gps, weather, geo, amateur, debris, enabled]);
+  }, [stations, starlink, oneweb, gps, weather, geo, amateur, other, debris, enabled]);
 }

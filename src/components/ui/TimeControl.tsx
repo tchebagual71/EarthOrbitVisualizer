@@ -118,11 +118,12 @@ export function TimeControl() {
 
         <div className="h-4 w-px bg-slate-700 flex-shrink-0" />
 
-        {/* Clock */}
-        <span className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 hidden sm:block">
+        {/* Clock — the prerendered HTML carries the build-time clock, so the
+            text legitimately differs on hydration */}
+        <span suppressHydrationWarning className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 hidden sm:block">
           {dateStr}
         </span>
-        <span className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 sm:hidden">
+        <span suppressHydrationWarning className="font-mono text-xs text-slate-300 select-none tabular-nums flex-shrink-0 sm:hidden">
           {dateStr.slice(11)}
         </span>
       </div>

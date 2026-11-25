@@ -7,6 +7,9 @@ import {
   propagateBatch,
   getOrbitPath,
   getGroundTrack,
+  orbitFrameRotationY,
+  isOccludedByEarth,
+  getLiveState,
 } from "./coordinates";
 import { EARTH_RADIUS_SCENE } from "./constants";
 
@@ -132,5 +135,88 @@ describe("getGroundTrack", () => {
     for (const p of track) {
       expect(len(p)).toBeCloseTo(EARTH_RADIUS_SCENE * 1.002, 4);
     }
+  });
+});
+
+describe("getOrbitPath (inertial frame)", () => {
+  const satrec = satellite.twoline2satrec(ISS_L1, ISS_L2);
+
+  it("closes on itself after one revolution instead of spiralling", () => {
+    const path = getOrbitPath(satrec, ISS_EPOCH, 180);
+    const gap = len({
+      x: path[0].x - path[path.length - 1].x,
+      y: path[0].y - path[path.length - 1].y,
+      z: path[0].z - path[path.length - 1].z,
+    });
+    // An Earth-fixed path would miss by ~2,500 km (23° of rotation at LEO)
+    expect(gap).toBeLessThan(0.1);
+  });
+
+  it("starts at the satellite's current position", () => {
+    const path = getOrbitPath(satrec, ISS_EPOCH, 90);
+    const now = propagateAt(satrec, ISS_EPOCH)!;
+    expect(path[0].x).toBeCloseTo(now.x, 6);
+    expect(path[0].y).toBeCloseTo(now.y, 6);
+    expect(path[0].z).toBeCloseTo(now.z, 6);
+  });
+});
+
+describe("orbitFrameRotationY", () => {
+  it("carries an inertial point from one Earth-fixed frame to a later one", () => {
+    const eci = { x: 7000, y: 1200, z: -300 };
+    const t0 = ISS_EPOCH;
+    const t1 = new Date(t0.getTime() + 47 * 60_000);
+    const p0 = eciToScene(eci, satellite.gstime(t0));
+    const expected = eciToScene(eci, satellite.gstime(t1));
+    // Same convention as THREE's rotation about +Y
+    const a = orbitFrameRotationY(t0, t1);
+    const x = p0.x * Math.cos(a) + p0.z * Math.sin(a);
+    const z = -p0.x * Math.sin(a) + p0.z * Math.cos(a);
+    expect(x).toBeCloseTo(expected.x, 6);
+    expect(p0.y).toBeCloseTo(expected.y, 6);
+    expect(z).toBeCloseTo(expected.z, 6);
+  });
+});
+
+describe("isOccludedByEarth", () => {
+  const eye = { x: 0, y: 0, z: 25 };
+
+  it("hides a satellite directly behind the globe", () => {
+    expect(isOccludedByEarth(eye, { x: 0, y: 0, z: -7 })).toBe(true);
+  });
+
+  it("keeps near-side and limb satellites visible", () => {
+    expect(isOccludedByEarth(eye, { x: 0, y: 0, z: 7 })).toBe(false);
+    expect(isOccludedByEarth(eye, { x: 7, y: 0, z: 0 })).toBe(false);
+    // Far side but high enough to clear the limb (GEO distance)
+    expect(isOccludedByEarth(eye, { x: 30, y: 0, z: -29 })).toBe(false);
+  });
+
+  it("hides a far-side satellite just below the limb", () => {
+    expect(isOccludedByEarth(eye, { x: 3, y: 0, z: -6.5 })).toBe(true);
+  });
+});
+
+describe("getLiveState", () => {
+  const satrec = satellite.twoline2satrec(ISS_L1, ISS_L2);
+
+  it("reports ISS-like altitude, speed and a sub-point within its inclination", () => {
+    const s = getLiveState(satrec, ISS_EPOCH)!;
+    expect(s.altitudeKm).toBeGreaterThan(330);
+    expect(s.altitudeKm).toBeLessThan(370);
+    expect(s.speedKms).toBeGreaterThan(7.5);
+    expect(s.speedKms).toBeLessThan(7.9);
+    expect(Math.abs(s.latDeg)).toBeLessThanOrEqual(51.7);
+    expect(Math.abs(s.lonDeg)).toBeLessThanOrEqual(180);
+  });
+
+  it("changes as time advances", () => {
+    const a = getLiveState(satrec, ISS_EPOCH)!;
+    const b = getLiveState(satrec, new Date(ISS_EPOCH.getTime() + 10 * 60_000))!;
+    expect(Math.abs(a.lonDeg - b.lonDeg)).toBeGreaterThan(1);
+  });
+
+  it("returns null when propagation fails", () => {
+    expect(getLiveState(satellite.twoline2satrec("garbage", "garbage"), ISS_EPOCH)).toBeNull();
   });
 });

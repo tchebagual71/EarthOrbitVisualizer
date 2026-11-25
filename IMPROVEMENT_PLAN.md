@@ -138,6 +138,16 @@ A focused pass after the deploy fix, prioritising small-screen usability:
 - **Search reachable on phones** — the collapsed control panel (now the phone default) gained its own search button beside the menu, so search isn't buried one tap deep behind the hamburger.
 - **First-run gesture hint** — a one-time, non-blocking pill ("drag to rotate · scroll or pinch to zoom · tap a satellite to inspect") that auto-dismisses on first interaction or after 8s and never returns (localStorage `eov-hint-seen`).
 
+### Phase G — Truthfulness pass ✅ DONE
+What the app shows, rather than how it is built:
+- **Picking respects the globe** — `SatelliteSelector` skips satellites hidden behind the Earth (`isOccludedByEarth`) and ones behind the camera; a tap on empty space deselects.
+- **The orbit line is the orbit** — `getOrbitPath` used to convert every point to the Earth-fixed frame at its own timestamp, drawing LEO orbits as open spirals and GEO orbits as a dot. It now returns the closed inertial ellipse, which `OrbitalPath` rotates westward each frame (`orbitFrameRotationY`).
+- **Live info panel** — altitude, speed and sub-satellite point are propagated at the sim clock (`getLiveState`); perigee/apogee come from mean elements. Previously altitude was a fetch-time snapshot and speed assumed a circular orbit at that altitude.
+- **Full catalogue** — Starlink is no longer the first 2,000 lines of its file; added OneWeb and an "Other Active" category (CelesTrak `active` minus the mega-constellations); GPS widened to all GNSS; debris merges the four largest fragmentation events. Objects listed in several groups are de-duplicated. To carry ~20k objects the cloud writes instance matrices directly and uses 20-triangle markers.
+- Also: the camera jump for MEO/GEO targets ended *inside* the satellite's orbit with the target behind the camera; the clock's unavoidable hydration text mismatch is now suppressed.
+
+Verified in headless Chromium against a production build with a synthetic 19k-object catalogue (CelesTrak was unreachable from the sandbox): near-side-only picking, deselect, live values ticking, closed LEO/GEO/Molniya orbit lines, cross-category de-duplication. **Not verified:** the new CelesTrak group names against the live API, and frame rate on real GPU hardware.
+
 ---
 
 ## 6. Status

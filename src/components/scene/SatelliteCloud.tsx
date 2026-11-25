@@ -30,7 +30,6 @@ const makeBuffers = (count: number) => ({
 // main thread.
 export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
 
   const workerRef = useRef<Worker | null>(null);
   const workerFailedRef = useRef(false);
@@ -133,25 +132,27 @@ export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props)
       );
     }
 
-    // Draw the latest completed batch
+    // Draw the latest completed batch. Instances are axis-aligned spheres, so
+    // write scale + translation straight into the matrix buffer (the
+    // off-diagonal terms stay at their identity zeros) instead of composing
+    // a full matrix per satellite. Scale 0 hides instances with no data yet.
     const pos = positionsRef.current;
     const valid = posValidRef.current;
-    const n = Math.min(satellites.length, valid.length, Math.floor(pos.length / 3));
-    for (let i = 0; i < n; i++) {
-      if (valid[i]) {
-        dummy.position.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
-        dummy.scale.setScalar(1);
-      } else {
-        dummy.scale.setScalar(0);
+    const m = mesh.instanceMatrix.array;
+    const count = Math.min(satellites.length, Math.floor(m.length / 16));
+    const n = Math.min(count, valid.length, Math.floor(pos.length / 3));
+    for (let i = 0; i < count; i++) {
+      const o = i * 16;
+      const s = i < n && valid[i] ? 1 : 0;
+      m[o] = s;
+      m[o + 5] = s;
+      m[o + 10] = s;
+      m[o + 15] = 1;
+      if (s) {
+        m[o + 12] = pos[i * 3];
+        m[o + 13] = pos[i * 3 + 1];
+        m[o + 14] = pos[i * 3 + 2];
       }
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
-    // Hide instances we have no data for yet (first batch still in flight)
-    dummy.scale.setScalar(0);
-    dummy.updateMatrix();
-    for (let i = n; i < satellites.length; i++) {
-      mesh.setMatrixAt(i, dummy.matrix);
     }
     mesh.instanceMatrix.needsUpdate = true;
   });
@@ -159,8 +160,15 @@ export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props)
   if (!satellites.length) return null;
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, satellites.length]}>
-      <sphereGeometry args={[SAT_MARKER_SIZE, 6, 6]} />
+    // Instances move every frame, so the mesh's cached bounding sphere would
+    // be stale — skip frustum culling rather than recompute it.
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, satellites.length]}
+      frustumCulled={false}
+    >
+      {/* 20 triangles per dot: the catalogue runs to tens of thousands */}
+      <icosahedronGeometry args={[SAT_MARKER_SIZE, 0]} />
       <meshBasicMaterial vertexColors />
       <instancedBufferAttribute
         attach="geometry-attributes-color"

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CELESTRAK_GROUPS } from "@/lib/categories";
-import { parseTLEText, tleToSatelliteRecord } from "@/lib/tle";
+import { recordsFromTLETexts } from "@/lib/tle";
 import type { SatelliteRecord } from "@/types/satellite";
 
 // Edge runtime: works on both Vercel Edge and Cloudflare Pages
@@ -35,17 +35,26 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(group.url, {
-      headers: { "User-Agent": "EarthOrbitVisualizer/1.0" },
-    });
-    if (!res.ok) throw new Error(`CelesTrak ${res.status}`);
+    // A category may merge several CelesTrak files; one missing file
+    // shouldn't take the whole category down, so only fail if all do.
+    const settled = await Promise.allSettled(
+      group.urls.map(async (url) => {
+        const res = await fetch(url, {
+          headers: { "User-Agent": "EarthOrbitVisualizer/1.0" },
+        });
+        if (!res.ok) throw new Error(`CelesTrak ${res.status}`);
+        return res.text();
+      })
+    );
+    const texts = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    if (!texts.length) {
+      const first = settled.find((r) => r.status === "rejected");
+      throw first?.reason instanceof Error ? first.reason : new Error("CelesTrak unreachable");
+    }
 
-    const text = await res.text();
-    const tles = parseTLEText(text);
-    const records = tles
-      .slice(0, group.maxDisplay)
-      .map((t) => tleToSatelliteRecord(t, group.id))
-      .filter((r): r is SatelliteRecord => r !== null);
+    const records = recordsFromTLETexts(texts, group);
+    // CelesTrak answers unknown groups / rate limits with a 200 text body
+    if (!records.length) throw new Error("CelesTrak returned no TLE data");
 
     memCache.set(group.id, { at: Date.now(), records });
     return NextResponse.json(records, { headers: CDN_CACHE_HEADERS });

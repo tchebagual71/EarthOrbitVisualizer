@@ -75,7 +75,13 @@ function CameraJumper() {
     try {
       const satrec = satellite.twoline2satrec(jumpTarget.line1, jumpTarget.line2);
       const pos = propagateAt(satrec, getSimTime());
-      if (pos) startJump(pos, Math.max(camera.position.length() * 0.5, 20));
+      if (pos) {
+        // End outside the satellite's own radius, otherwise a high orbit
+        // (MEO/GEO) leaves the camera between the Earth and the satellite
+        // with the target behind it.
+        const satDist = Math.hypot(pos.x, pos.y, pos.z);
+        startJump(pos, Math.min(Math.max(camera.position.length() * 0.5, satDist * 1.8, 20), 200));
+      }
     } catch { /* ignore */ }
     setJumpTarget(null);
   }, [jumpTarget, camera, setJumpTarget, startJump]);
@@ -131,7 +137,7 @@ export function SceneCanvas() {
   const { satellites } = useAllTLEData(enabledCategories);
 
   const handleSelect = useCallback(
-    (sat: SatelliteRecord) => setSelectedSat(sat),
+    (sat: SatelliteRecord | null) => setSelectedSat(sat),
     [setSelectedSat]
   );
 

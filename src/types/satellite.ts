@@ -35,7 +35,10 @@ export interface OrbitalPath {
 export interface CelestrakGroup {
   id: OrbitCategory;
   label: string;
-  url: string;
+  // One category may merge several CelesTrak files
+  urls: readonly string[];
   color: string;
   maxDisplay: number;
+  // Names matching this are dropped (they belong to a more specific category)
+  excludeName?: RegExp;
 }

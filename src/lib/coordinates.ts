@@ -82,19 +82,82 @@ export function propagateBatch(
   }
 }
 
+// One revolution of the orbit, expressed in the scene (Earth-fixed) frame as
+// it is oriented at `date`: every point uses the *same* sidereal angle, so the
+// result is the closed inertial ellipse rather than an Earth-relative spiral
+// (which is what the ground track shows). To keep it correct as time moves on
+// without re-propagating, rotate it by orbitFrameRotationY(date, now).
 export function getOrbitPath(
   satrec: satellite.SatRec,
   date: Date,
   steps = 90
 ): ScenePosition[] {
   const period = (2 * Math.PI) / satrec.no; // minutes
+  const gmst = satellite.gstime(date);
   const points: ScenePosition[] = [];
   for (let i = 0; i <= steps; i++) {
     const t = new Date(date.getTime() + (i / steps) * period * 60 * 1000);
-    const pos = propagateAt(satrec, t);
-    if (pos) points.push(pos);
+    const result = satellite.propagate(satrec, t);
+    if (!result.position || typeof result.position === "boolean") continue;
+    const p = eciToScene(result.position as satellite.EciVec3<number>, gmst);
+    if (Number.isFinite(p.x + p.y + p.z)) points.push(p);
   }
   return points;
+}
+
+// Rotation about the scene Y axis (radians) that carries inertial geometry
+// expressed in the Earth-fixed frame of `computedAt` into the Earth-fixed
+// frame of `now`. The Earth turns east, so inertial things drift west.
+export function orbitFrameRotationY(computedAt: Date, now: Date): number {
+  return -(satellite.gstime(now) - satellite.gstime(computedAt));
+}
+
+// True when the Earth blocks the straight line from `eye` to `point`
+// (both in scene coordinates). Used so far-side satellites can't be picked.
+export function isOccludedByEarth(
+  eye: ScenePosition,
+  point: ScenePosition,
+  radiusScene = EARTH_RADIUS_SCENE
+): boolean {
+  const dx = point.x - eye.x;
+  const dy = point.y - eye.y;
+  const dz = point.z - eye.z;
+  const lenSq = dx * dx + dy * dy + dz * dz;
+  if (lenSq === 0) return false;
+  // Closest approach of the eye→point segment to the Earth's center
+  const t = Math.min(1, Math.max(0, -(eye.x * dx + eye.y * dy + eye.z * dz) / lenSq));
+  const cx = eye.x + t * dx;
+  const cy = eye.y + t * dy;
+  const cz = eye.z + t * dz;
+  return cx * cx + cy * cy + cz * cz < radiusScene * radiusScene;
+}
+
+export interface LiveState {
+  altitudeKm: number; // geodetic height above the WGS-84 ellipsoid
+  speedKms: number; // inertial speed
+  latDeg: number;
+  lonDeg: number; // east-positive, −180…180
+}
+
+// Instantaneous state of a satellite at `date`, for the info panel.
+export function getLiveState(satrec: satellite.SatRec, date: Date): LiveState | null {
+  const result = satellite.propagate(satrec, date);
+  if (!result.position || typeof result.position === "boolean") return null;
+  if (!result.velocity || typeof result.velocity === "boolean") return null;
+  const v = result.velocity as satellite.EciVec3<number>;
+  const geo = satellite.eciToGeodetic(
+    result.position as satellite.EciVec3<number>,
+    satellite.gstime(date)
+  );
+  const state = {
+    altitudeKm: geo.height,
+    speedKms: Math.hypot(v.x, v.y, v.z),
+    latDeg: satellite.degreesLat(geo.latitude),
+    lonDeg: satellite.degreesLong(geo.longitude),
+  };
+  return Number.isFinite(state.altitudeKm + state.speedKms + state.latDeg + state.lonDeg)
+    ? state
+    : null;
 }
 
 // Sub-satellite ground track projected onto Earth surface
