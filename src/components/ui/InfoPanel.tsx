@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import * as satellite from "satellite.js";
 import { useStore } from "@/hooks/useStore";
-import { classifyAltitude, classifyOrbit, getTLEAgeHours, orbitApsides, orbitalPeriodMin } from "@/lib/tle";
+import { ATMOSPHERE_WATCH_PERIGEE_KM, classifyAltitude, classifyOrbit, getTLEAgeHours, orbitApsides, orbitalPeriodMin } from "@/lib/tle";
 import { getLiveState } from "@/lib/coordinates";
 import { CATEGORY_MAP } from "@/lib/categories";
 
@@ -132,6 +132,13 @@ export function InfoPanel() {
         <span>TLE data {age.text}</span>
         {age.warn && <span className="text-amber-400 font-semibold">· accuracy reduced</span>}
       </div>
+
+      {/* Atmosphere warning */}
+      {orbit && orbit.perigeeKm < ATMOSPHERE_WATCH_PERIGEE_KM && (
+        <div className="mt-1.5 rounded-md bg-red-900/40 px-2 py-1.5 text-xs text-red-300">
+          ⚠ Dips into the upper atmosphere — perigee {km(orbit.perigeeKm)} km
+        </div>
+      )}
 
       {/* Follow camera */}
       <button

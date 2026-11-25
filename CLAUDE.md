@@ -56,12 +56,14 @@ EarthOrbitVisualizer/
     │   ├── page.tsx              ← visualizer + HUD overlays; ErrorBoundary + prefs rehydrate
     │   ├── sw.ts                 ← Serwist service-worker source (precache, runtime caching)
     │   ├── globals.css
-    │   └── api/satellites/route.ts ← edge TLE proxy; in-memory cache + stale fallback
+    │   ├── api/satellites/route.ts ← edge TLE proxy; in-memory cache + stale fallback
+    │   └── api/flybys/route.ts   ← edge proxy: JPL close approaches + Horizons trajectories (6 h cache)
     ├── components/
     │   ├── scene/
     │   │   ├── SceneCanvas.tsx   ← R3F Canvas, SimClockDriver, CameraJumper, tap-select wiring
 │   │   ├── CameraFrameDriver.tsx ← follow-satellite chase camera + inertial (star-fixed) view
-│   │   ├── Sky.tsx           ← star field, rotated with the inertial frame
+│   │   ├── Sky.tsx           ← star field, rotated with the inertial frame, travels with the camera
+│   │   ├── DeepSpace.tsx     ← Moon + lunar orbit, asteroid flyby tracks/labels (shown with the flyby view)
     │   │   ├── Earth.tsx         ← textured sphere + clouds + simple atmosphere shell
     │   │   ├── SunLight.tsx      ← directional light driven by solar position
     │   │   ├── OrbitalShells.tsx ← translucent altitude spheres + SHELL_DEFS learning content
@@ -74,12 +76,14 @@ EarthOrbitVisualizer/
     │   └── ui/
     │       ├── ControlPanel.tsx  ← draggable left panel: categories, sites, shells
     │       ├── CategoryFilter.tsx
+    │       ├── WatchSection.tsx  ← "Incoming": atmosphere watch list + asteroid flyby list, zoom buttons
     │       ├── InfoPanel.tsx     ← selected satellite live state (alt/speed/sub-point), apsides, TLE age warning
     │       ├── TimeControl.tsx   ← play/pause, speeds, presets, clock
     │       ├── SearchPanel.tsx   ← '/' fuzzy search over satellites + launch sites
     │       ├── LearningCard.tsx  ← orbital shell education modal
     │       └── LoadingOverlay.tsx
     ├── hooks/
+    │   ├── useFlybys.ts          ← SWR fetch of /api/flybys; null key until the flyby view is on
     │   ├── useTLEData.ts         ← SWR fetch per category; memoized merge; null key when disabled
     │   └── useStore.ts           ← Zustand store (selection, filters, time, UI state)
     ├── lib/                      ← pure, unit-tested modules
@@ -87,6 +91,8 @@ EarthOrbitVisualizer/
     │   ├── simClock.ts           ← sim time outside React (see Time Architecture)
     │   ├── coordinates.ts        ← ECI→ECEF→scene transforms, propagateBatch + helpers (+tests)
     │   ├── solar.ts              ← low-precision solar position (+tests)
+    │   ├── moon.ts               ← low-precision lunar position, ECI km (+tests)
+    │   ├── flybys.ts             ← JPL CAD/Horizons parsing, flyby interpolation + formatting (+tests)
     │   ├── tle.ts                ← TLE parse/classify/derive helpers (+tests)
     │   ├── categories.ts         ← CELESTRAK_GROUPS (single source of truth) → OrbitCategory
     │   ├── launchsites.ts        ← static launch-site database (36 sites)
@@ -161,6 +167,16 @@ This sandbox's network policy may block `celestrak.org`; if so, test with mocked
 
 The edge API route at `/api/satellites?category=<id>` fetches server-side (avoids CORS; a category fails only if *all* of its files fail), parses TLEs into `SatelliteRecord`s, and sets `Cache-Control: s-maxage=3600, stale-while-revalidate=7200` for the CDN. It also keeps a module-level cache (spares CelesTrak on dev-server reloads / warm edge isolates, and serves stale data when upstream is down). Client-side, SWR dedupes for 1 hour and disabled categories use a null key (not fetched).
 
+### Asteroid flybys (NASA/JPL, no key)
+
+`/api/flybys` asks JPL's close-approach API (`ssd-api.jpl.nasa.gov/cad.api`) for asteroids passing within 0.05 AU from 3 days ago to 60 days ahead, keeps the 20 closest, and fetches each one's geocentric trajectory from Horizons (`ssd.jpl.nasa.gov/api/horizons.api`, `VECTORS`, `CENTER='500@399'`, `REF_PLANE='FRAME'`, ±3 days around closest approach, 3 h steps, 5 requests at a time, one retry). Numbered asteroids are addressed as `'433;'`, the rest as `'DES=2026 VQ19;'`. Horizons times are TDB (`jdTdbToUnixMs` removes the ~69 s offset). A flyby whose Horizons call fails is still listed, with `path: null`.
+
+To exercise this route from a local server behind an HTTPS proxy, start Next with `NODE_USE_ENV_PROXY=1` (Node's `fetch` ignores `HTTPS_PROXY` otherwise).
+
+### Atmosphere watch (derived, no extra source)
+
+`atmosphereWatch()` in `tle.ts` scans the loaded catalogue's TLE text (`apsidesFromTLE`) for perigee below 300 km: "reentering" (< 200 km), "decaying", or "skimming" (eccentric orbit, apogee − perigee > 1,000 km). It only sees what the enabled categories load. CelesTrak's dedicated decay feed is *not* used — it could not be verified from the sandbox.
+
 ---
 
 ## Development Commands
@@ -218,6 +234,7 @@ CI (`.github/workflows/ci.yml`) runs type-check → lint → test → build on P
 - **`SatelliteRecord.altitude` is a fetch-time snapshot** — fine for search results, never for display of current state; use `getLiveState`.
 - **`vercel.json`** pins the Next.js framework preset; the deploy broke without it — keep it.
 - **Camera frames:** the scene stays Earth-fixed; `CameraFrameDriver` moves the *camera* instead. Follow mode pivots OrbitControls on the satellite, rotates the camera offset with the satellite's motion and sets `camera.up` to the local vertical (drei's three-stdlib OrbitControls re-reads `up` every update). Inertial view rotates the camera about Y by the per-frame change in `inertialFrameRotationY`. It runs after OrbitControls (priority −1) and only nudges `camera.position`/`controls.target`, so user input keeps working. Deselecting releases follow.
+- **Deep-space scale:** flybys sit at thousands of scene units, so the camera far plane is 60,000 and `maxDistance` rises to 15,000 while the flyby view is on. Everything in `DeepSpace` is inertial: built with `eciKmToInertialScene` inside a group rotated by `inertialFrameRotationY`. Beyond 150 units with flybys on, `CameraFrameDriver` forces the inertial camera (an Earth-fixed one would whirl the view daily). Asteroid/Moon/Earth labels are drei `Html` with a low `zIndexRange` so they stay under the HUD.
 - **Marker size** is scaled in the vertex shader by camera distance (clamped), so dots stay dot-sized up close and visible at GEO range.
 - **No WebGPU:** stick with WebGL2.
 - **PWA / service worker:** Serwist generates `public/sw.js` from `src/app/sw.ts` at build time (disabled in dev so it doesn't mask hot reloads). Textures are cached cache-first; TLE responses network-first with a 7-day offline fallback. The generated `sw.js`/`sw.js.map` are gitignored.
@@ -235,3 +252,4 @@ Tracked in `IMPROVEMENT_PLAN.md` — all phases complete:
 - [x] Phases E–F — mobile pass, selection reticle, first-run hint
 - [x] Phase G — occlusion-aware picking, inertial orbit line, live info panel, full catalogue
 - [x] Phase H — follow camera, inertial view, rotating star field, distance-scaled markers
+- [x] Phase I — "Incoming": atmosphere watch + asteroid flyby view (Moon, JPL trajectories)

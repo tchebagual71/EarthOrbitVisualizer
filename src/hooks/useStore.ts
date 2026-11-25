@@ -34,6 +34,16 @@ interface AppState {
   inertialView: boolean;       // hold the stars still, let the Earth turn
   setInertialView: (v: boolean) => void;
 
+  // Watch: things coming down or passing by
+  showReentryWatch: boolean;   // highlight objects dipping into the atmosphere
+  setShowReentryWatch: (v: boolean) => void;
+  showFlybys: boolean;         // asteroid close approaches + Moon, deep-space zoom
+  setShowFlybys: (v: boolean) => void;
+  selectedFlyby: string | null; // designation
+  setSelectedFlyby: (des: string | null) => void;
+  zoomRequest: number | null;  // fly the camera to this distance from the Earth
+  requestZoom: (distance: number | null) => void;
+
   // Satellite filters
   enabledCategories: Set<OrbitCategory>;
   toggleCategory: (c: OrbitCategory) => void;
@@ -72,6 +82,8 @@ type PersistedPrefs = Pick<
   | "showGroundTrack"
   | "showSatTrail"
   | "inertialView"
+  | "showReentryWatch"
+  | "showFlybys"
 >;
 
 // JSON can't encode Sets — round-trip them through a tagged array
@@ -115,6 +127,19 @@ export const useStore = create<AppState>()(
   setFollowSat: (followSat) => set({ followSat }),
   inertialView: false,
   setInertialView: (inertialView) => set({ inertialView }),
+
+  showReentryWatch: false,
+  setShowReentryWatch: (showReentryWatch) => set({ showReentryWatch }),
+  showFlybys: false,
+  setShowFlybys: (showFlybys) =>
+    set(showFlybys ? { showFlybys } : { showFlybys, selectedFlyby: null }),
+  selectedFlyby: null,
+  setSelectedFlyby: (selectedFlyby) => set({ selectedFlyby }),
+  zoomRequest: null,
+  // Zooming to a whole-system view and riding along with one satellite are
+  // mutually exclusive
+  requestZoom: (zoomRequest) =>
+    set(zoomRequest === null ? { zoomRequest } : { zoomRequest, followSat: false }),
 
   enabledCategories: new Set<OrbitCategory>(ORBIT_CATEGORIES),
   toggleCategory: (c) =>
@@ -174,6 +199,8 @@ export const useStore = create<AppState>()(
         showGroundTrack: s.showGroundTrack,
         showSatTrail: s.showSatTrail,
         inertialView: s.inertialView,
+        showReentryWatch: s.showReentryWatch,
+        showFlybys: s.showFlybys,
       }),
       // Rehydrated manually after mount (see page.tsx) to avoid SSR/client
       // markup mismatches from reading localStorage during initial render.

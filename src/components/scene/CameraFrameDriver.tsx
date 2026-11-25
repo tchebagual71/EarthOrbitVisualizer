@@ -15,6 +15,8 @@ const ORIGIN = new THREE.Vector3(0, 0, 0);
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 // How far ahead (sim ms) to sample the orbit for the direction of travel
 const AHEAD_MS = 10_000;
+// Beyond this camera distance the flyby view is treated as inertial
+const DEEP_SPACE_DISTANCE = 150;
 const TRANSITION_STEP = 0.03; // per frame → ~0.55 s at 60 fps
 
 // Moves the camera with a reference frame other than the Earth-fixed scene:
@@ -126,7 +128,12 @@ export function CameraFrameDriver() {
       camera.lookAt(controls.target);
     }
 
-    if (useStore.getState().inertialView && skyDelta !== 0) {
+    // Out among the Moon and the asteroids everything on screen is inertial,
+    // and an Earth-fixed camera would whirl the whole view round once a day —
+    // so the deep-space view always holds the stars still.
+    const { inertialView, showFlybys } = useStore.getState();
+    const deepSpace = showFlybys && camera.position.lengthSq() > DEEP_SPACE_DISTANCE ** 2;
+    if ((inertialView || deepSpace) && skyDelta !== 0) {
       camera.position.applyAxisAngle(Y_AXIS, skyDelta);
       camera.lookAt(controls.target);
     }

@@ -112,6 +112,13 @@ export function inertialFrameRotationY(date: Date): number {
   return -satellite.gstime(date);
 }
 
+// An inertial (ECI, km) position in scene axes *before* the Earth-rotation
+// step — i.e. as it would sit in the scene at sidereal angle 0. Geometry built
+// from these belongs in a group rotated by inertialFrameRotationY(now).
+export function eciKmToInertialScene(p: { x: number; y: number; z: number }): ScenePosition {
+  return { x: p.x / SCENE_SCALE_KM, y: p.z / SCENE_SCALE_KM, z: -p.y / SCENE_SCALE_KM };
+}
+
 // Rotation about the scene Y axis (radians) that carries inertial geometry
 // expressed in the Earth-fixed frame of `computedAt` into the Earth-fixed
 // frame of `now`.

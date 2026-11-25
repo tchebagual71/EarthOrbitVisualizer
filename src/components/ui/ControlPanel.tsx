@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CategoryFilter } from "./CategoryFilter";
+import { WatchSection } from "./WatchSection";
 import { useStore } from "@/hooks/useStore";
 import { useAllTLEData } from "@/hooks/useTLEData";
 import {
@@ -162,6 +163,9 @@ export function ControlPanel() {
         </p>
         <CategoryFilter />
       </div>
+
+      {/* Reentries and asteroid flybys */}
+      <WatchSection />
 
       {/* Launch sites section */}
       <div className="border-t border-slate-700/50 px-3 py-2">

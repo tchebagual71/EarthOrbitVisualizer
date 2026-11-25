@@ -12,6 +12,8 @@ import {
   orbitApsides,
   recordsFromTLETexts,
   dedupeByNoradId,
+  apsidesFromTLE,
+  atmosphereWatch,
 } from "./tle";
 
 // Canonical ISS TLE (epoch 2008-09-20, ~350 km, i=51.64°)
@@ -200,5 +202,46 @@ describe("recordsFromTLETexts / dedupeByNoradId", () => {
     const b = recordsFromTLETexts([tle("ISS", "25544") + tle("X", "00002")], group, ISS_EPOCH);
     const merged = dedupeByNoradId([a, b]);
     expect(merged.map((r) => [r.name, r.category])).toEqual([["ISS", "stations"], ["X", "other"]]);
+  });
+});
+
+describe("apsidesFromTLE / atmosphereWatch", () => {
+  // Rewrite eccentricity (cols 27–33) and mean motion (cols 53–63) of line 2
+  const line2 = (ecc: string, revsPerDay: string): string =>
+    withChecksum(ISS_L2.slice(0, 26) + ecc + ISS_L2.slice(33, 52) + revsPerDay + ISS_L2.slice(63, 68));
+  const rec = (name: string, noradId: number, l2: string) => ({
+    id: String(noradId), name, line1: ISS_L1, line2: l2, category: "other" as const,
+    noradId, inclination: 51.6, altitude: 0,
+  });
+
+  it("agrees with the satrec-based apsides", () => {
+    const fromText = apsidesFromTLE(ISS_L2)!;
+    const fromSatrec = orbitApsides(satellite.twoline2satrec(ISS_L1, ISS_L2));
+    // satrec.no is the un-Kozai'd mean motion, so allow a couple of km
+    expect(Math.abs(fromText.perigeeKm - fromSatrec.perigeeKm)).toBeLessThan(2);
+    expect(Math.abs(fromText.apogeeKm - fromSatrec.apogeeKm)).toBeLessThan(2);
+  });
+
+  it("returns null for unparseable lines", () => {
+    expect(apsidesFromTLE("garbage")).toBeNull();
+  });
+
+  it("lists only low-perigee objects, lowest first, and classifies them", () => {
+    const sats = [
+      rec("HIGH", 1, line2("0001000", "14.20000000")), // ~830 km circular
+      rec("DECAYING", 2, line2("0005000", "15.95000000")), // ~260 km
+      rec("REENTERING", 3, line2("0005000", "16.30000000")), // ~150 km
+      rec("GTO STAGE", 4, line2("7300000", " 2.26000000")), // ~180 × 35,800 km
+    ];
+    const watch = atmosphereWatch(sats);
+    expect(watch.map((w) => w.sat.name)).not.toContain("HIGH");
+    expect(Object.fromEntries(watch.map((w) => [w.sat.name, w.kind]))).toEqual({
+      DECAYING: "decaying",
+      REENTERING: "reentering",
+      "GTO STAGE": "skimming",
+    });
+    const perigees = watch.map((w) => w.perigeeKm);
+    expect(perigees).toEqual([...perigees].sort((a, b) => a - b));
+    expect(watch.find((w) => w.sat.name === "GTO STAGE")!.apogeeKm).toBeGreaterThan(30000);
   });
 });

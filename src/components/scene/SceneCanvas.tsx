@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -16,6 +16,9 @@ import { LaunchSites } from "./LaunchSites";
 import { SunLight } from "./SunLight";
 import { Sky } from "./Sky";
 import { CameraFrameDriver } from "./CameraFrameDriver";
+import { DeepSpace } from "./DeepSpace";
+import { useFlybys } from "@/hooks/useFlybys";
+import { atmosphereWatch } from "@/lib/tle";
 import { useStore } from "@/hooks/useStore";
 import { useAllTLEData } from "@/hooks/useTLEData";
 import { propagateAt } from "@/lib/coordinates";
@@ -54,6 +57,8 @@ function CameraJumper() {
   const setJumpTarget = useStore((s) => s.setJumpTarget);
   const jumpPosition = useStore((s) => s.jumpPosition);
   const setJumpPosition = useStore((s) => s.setJumpPosition);
+  const zoomRequest = useStore((s) => s.zoomRequest);
+  const requestZoom = useStore((s) => s.requestZoom);
   const { camera } = useThree();
   const targetVec   = useRef(new THREE.Vector3());
   const startPos    = useRef(new THREE.Vector3());
@@ -97,6 +102,18 @@ function CameraJumper() {
     setJumpPosition(null);
   }, [jumpPosition, setJumpPosition, startJump]);
 
+  // Zoom straight in or out along the current view direction, looking at the
+  // Earth (used to pull back to lunar distances and to come home again)
+  useEffect(() => {
+    if (zoomRequest === null) return;
+    startPos.current.copy(camera.position);
+    endPos.current.copy(camera.position).setLength(zoomRequest);
+    targetVec.current.set(0, 0, 0);
+    progress.current = 0;
+    jumping.current = true;
+    requestZoom(null);
+  }, [zoomRequest, camera, requestZoom]);
+
   useFrame(() => {
     if (!jumping.current) return;
     // While following, CameraFrameDriver owns the camera
@@ -126,6 +143,8 @@ export function SceneCanvas() {
   const showSearch = useStore((s) => s.showSearch);
   const setShowSearch = useStore((s) => s.setShowSearch);
   const following = useStore((s) => s.followSat && s.selectedSat !== null);
+  const showReentryWatch = useStore((s) => s.showReentryWatch);
+  const showFlybys = useStore((s) => s.showFlybys);
 
   const positionsRef = useRef(new Float32Array(0));
   const posValidRef  = useRef(new Uint8Array(0));
@@ -146,6 +165,15 @@ export function SceneCanvas() {
   }, [showSearch, setShowSearch]);
 
   const { satellites } = useAllTLEData(enabledCategories);
+  const { flybys } = useFlybys(showFlybys);
+
+  const highlightIds = useMemo(
+    () =>
+      showReentryWatch
+        ? new Set(atmosphereWatch(satellites).map((w) => w.sat.noradId))
+        : null,
+    [showReentryWatch, satellites]
+  );
 
   const handleSelect = useCallback(
     (sat: SatelliteRecord | null) => setSelectedSat(sat),
@@ -167,7 +195,8 @@ export function SceneCanvas() {
   return (
     <div className="h-full w-full" onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
       <Canvas
-        camera={{ position: [0, 0, 25], fov: 45, near: 0.1, far: 1000 }}
+        // far plane reaches past the asteroid flybys (tens of lunar distances)
+        camera={{ position: [0, 0, 25], fov: 45, near: 0.1, far: 60000 }}
         gl={{ antialias: true, alpha: false }}
         style={{ background: "#000008", touchAction: "none" }}
       >
@@ -193,8 +222,11 @@ export function SceneCanvas() {
             satellites={satellites}
             positionsRef={positionsRef}
             posValidRef={posValidRef}
+            highlightIds={highlightIds}
           />
         </Suspense>
+
+        {showFlybys && <DeepSpace flybys={flybys} />}
 
         <SatelliteSelector
           satellites={satellites}
@@ -218,7 +250,7 @@ export function SceneCanvas() {
           enablePan={false}
           // Pivot is the Earth's center normally, the satellite when following
           minDistance={following ? 0.4 : 7}
-          maxDistance={200}
+          maxDistance={showFlybys ? 15000 : 200}
           rotateSpeed={0.5}
           zoomSpeed={0.8}
           enableDamping

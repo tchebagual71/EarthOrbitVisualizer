@@ -16,6 +16,8 @@ interface Props {
   // [x0,y0,z0, x1,y1,z1, ...]; index i is valid only when posValid[i] === 1
   positionsRef: React.MutableRefObject<Float32Array>;
   posValidRef: React.MutableRefObject<Uint8Array>;
+  // NORAD ids to draw in the warning color, enlarged (atmosphere watch)
+  highlightIds?: ReadonlySet<number> | null;
 }
 
 // Camera distance (scene units) at which a marker is drawn at SAT_MARKER_SIZE
@@ -31,7 +33,10 @@ const makeBuffers = (count: number) => ({
 // time. Positions therefore lag the clock by ≤1 frame, which is invisible at
 // normal speeds. If the worker can't start, propagation falls back to the
 // main thread.
-export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props) {
+const HIGHLIGHT_COLOR = "#ef4444";
+const HIGHLIGHT_SCALE = 2;
+
+export function SatelliteCloud({ satellites, positionsRef, posValidRef, highlightIds }: Props) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
   const workerRef = useRef<Worker | null>(null);
@@ -96,14 +101,24 @@ export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props)
   const colors = useMemo(() => {
     const arr = new Float32Array(satellites.length * 3);
     satellites.forEach((s, i) => {
-      const hex = CATEGORY_MAP[s.category]?.color ?? "#ffffff";
+      const hex = highlightIds?.has(s.noradId)
+        ? HIGHLIGHT_COLOR
+        : CATEGORY_MAP[s.category]?.color ?? "#ffffff";
       const c = new THREE.Color(hex);
       arr[i * 3] = c.r;
       arr[i * 3 + 1] = c.g;
       arr[i * 3 + 2] = c.b;
     });
     return arr;
-  }, [satellites]);
+  }, [satellites, highlightIds]);
+
+  const scales = useMemo(() => {
+    const arr = new Float32Array(satellites.length).fill(1);
+    if (highlightIds?.size) {
+      satellites.forEach((s, i) => { if (highlightIds.has(s.noradId)) arr[i] = HIGHLIGHT_SCALE; });
+    }
+    return arr;
+  }, [satellites, highlightIds]);
 
   // Markers are far larger than any real satellite, so a fixed world size
   // turns them into boulders when the camera is close (follow mode) and
@@ -162,7 +177,7 @@ export function SatelliteCloud({ satellites, positionsRef, posValidRef }: Props)
     const n = Math.min(count, valid.length, Math.floor(pos.length / 3));
     for (let i = 0; i < count; i++) {
       const o = i * 16;
-      const s = i < n && valid[i] ? 1 : 0;
+      const s = i < n && valid[i] ? scales[i] : 0;
       m[o] = s;
       m[o + 5] = s;
       m[o + 10] = s;

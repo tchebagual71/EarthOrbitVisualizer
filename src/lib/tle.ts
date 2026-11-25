@@ -94,6 +94,58 @@ export function dedupeByNoradId(lists: SatelliteRecord[][]): SatelliteRecord[] {
   return out;
 }
 
+// Perigee/apogee altitude straight from the TLE text (mean motion and
+// eccentricity columns of line 2) — cheap enough to scan the whole catalogue.
+export function apsidesFromTLE(line2: string): { perigeeKm: number; apogeeKm: number } | null {
+  const revsPerDay = parseFloat(line2.substring(52, 63));
+  const ecc = parseFloat(`0.${line2.substring(26, 33).trim()}`);
+  if (!(revsPerDay > 0) || !Number.isFinite(ecc)) return null;
+  const nRadSec = (revsPerDay * 2 * Math.PI) / 86400;
+  const a = Math.cbrt(GM / (nRadSec * nRadSec));
+  return {
+    perigeeKm: a * (1 - ecc) - EARTH_RADIUS_KM,
+    apogeeKm: a * (1 + ecc) - EARTH_RADIUS_KM,
+  };
+}
+
+// "reentering": so low that drag will bring it down within days to weeks.
+// "decaying": low enough to be sinking steadily.
+// "skimming": an eccentric orbit that dips into the upper atmosphere at
+// perigee and swings back out — it runs past rather than falls in (for now).
+export type AtmosphereWatchKind = "reentering" | "decaying" | "skimming";
+
+export interface AtmosphereWatchEntry {
+  sat: SatelliteRecord;
+  perigeeKm: number;
+  apogeeKm: number;
+  kind: AtmosphereWatchKind;
+}
+
+export const ATMOSPHERE_WATCH_PERIGEE_KM = 300;
+const REENTERING_PERIGEE_KM = 200;
+const SKIMMING_MIN_SPAN_KM = 1000;
+
+// Tracked objects whose orbit reaches into the upper atmosphere, lowest
+// perigee first.
+export function atmosphereWatch(
+  sats: SatelliteRecord[],
+  maxPerigeeKm = ATMOSPHERE_WATCH_PERIGEE_KM
+): AtmosphereWatchEntry[] {
+  const out: AtmosphereWatchEntry[] = [];
+  for (const sat of sats) {
+    const apsides = apsidesFromTLE(sat.line2);
+    if (!apsides || apsides.perigeeKm >= maxPerigeeKm) continue;
+    const kind: AtmosphereWatchKind =
+      apsides.apogeeKm - apsides.perigeeKm > SKIMMING_MIN_SPAN_KM
+        ? "skimming"
+        : apsides.perigeeKm < REENTERING_PERIGEE_KM
+          ? "reentering"
+          : "decaying";
+    out.push({ sat, ...apsides, kind });
+  }
+  return out.sort((a, b) => a.perigeeKm - b.perigeeKm);
+}
+
 const GEO_TOLERANCE_KM = 500;
 
 export function classifyAltitude(altitudeKm: number): string {

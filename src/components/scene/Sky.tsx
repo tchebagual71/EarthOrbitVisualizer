@@ -8,12 +8,14 @@ import { getSimTime } from "@/lib/simClock";
 
 // The star field belongs to the inertial frame. The scene is Earth-fixed, so
 // the stars wheel westward once per sidereal day — just as the sun light
-// already does.
+// already does. It also travels with the camera (a skybox), so zooming out to
+// lunar distances and beyond never leaves the stars behind.
 export function Sky() {
   const groupRef = useRef<THREE.Group>(null);
 
-  useFrame(() => {
+  useFrame(({ camera }) => {
     if (groupRef.current) {
+      groupRef.current.position.copy(camera.position);
       groupRef.current.rotation.y = inertialFrameRotationY(getSimTime());
     }
   });

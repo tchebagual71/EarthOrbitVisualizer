@@ -156,6 +156,14 @@ Verified in headless Chromium against a production build with a synthetic 19k-ob
 
 Verified in headless Chromium (same synthetic catalogue): the followed satellite stays centred while time runs at 1 min/s for LEO and GEO targets, release returns the pivot to the Earth, and in inertial view at 1 h/s the Earth rotates under a fixed sky.
 
+### Phase I — Incoming: reentries and flybys ✅ DONE
+A new "Incoming" section in the control panel answers "what is coming down, and what is passing by":
+- **Entering the atmosphere** — lists tracked objects whose perigee is below 300 km (reentering / decaying / skimming past on an eccentric orbit), lowest first, and draws them red and enlarged. Clicking one selects and jumps to it; the info panel carries a matching warning. Derived from the loaded catalogue, so it only covers enabled categories.
+- **Asteroid flybys** — fetches the closest asteroid passes of the next 60 days from NASA/JPL with real trajectories, and zooms the camera out to lunar distances: Moon and its orbit for scale, each asteroid's track, a label at closest approach and a live marker when the clock is inside its ±3-day window. Selecting one frames its pass; a button sets the clock to 6 h before closest approach.
+- The star field now travels with the camera, and the far view is always inertial.
+
+Verified in headless Chromium with the flybys route running against the live JPL APIs (20 asteroids, all with trajectories, sampled miss distances matching JPL's published ones). Satellite data was still synthetic — CelesTrak resets connections from the sandbox.
+
 ---
 
 ## 6. Status
